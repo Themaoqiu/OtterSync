@@ -113,12 +113,41 @@ abstract final class AppSpace {
     16,
     112,
   );
-  static const double radiusSmall = 8;
-  static const double radius = 12;
+  static const double radiusSmall = 6;
+  static const double radius = 10;
   static const double radiusLarge = 16;
+  static const double radiusXLarge = 24;
   static const double radiusFull = 999;
   static const double cardRadius = radiusLarge;
+  static const double dialogRadius = radiusXLarge;
   static const double pillRadius = radiusFull;
+}
+
+abstract final class AppShadows {
+  static List<BoxShadow> get cardSoft => [
+    const BoxShadow(
+      color: Color(0x0A091E42), // Very subtle shade
+      blurRadius: 10,
+      offset: Offset(0, 4),
+    ),
+  ];
+
+  static List<BoxShadow> get cardHover => [
+    const BoxShadow(
+      color: Color(0x14091E42), // More pronounced
+      blurRadius: 20,
+      offset: Offset(0, 8),
+    ),
+  ];
+
+  static List<BoxShadow> get dialog => [
+    const BoxShadow(
+      color: Color(0x1A091E42),
+      blurRadius: 32,
+      spreadRadius: 2,
+      offset: Offset(0, 12),
+    ),
+  ];
 }
 
 abstract final class AppDecorations {
@@ -127,19 +156,18 @@ abstract final class AppDecorations {
     double radius = AppSpace.radiusLarge,
     Color? color,
     Border? border,
+    List<BoxShadow>? customShadow,
   }) {
     final palette = AppThemePalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return BoxDecoration(
       color: color ?? palette.surface,
       borderRadius: BorderRadius.circular(radius),
-      border: border ?? Border.all(color: palette.border),
-      boxShadow: [
-        BoxShadow(
-          color: palette.shadow,
-          blurRadius: 18,
-          offset: const Offset(0, 6),
-        ),
-      ],
+      border:
+          border ??
+          Border.all(color: isDark ? palette.border : Colors.transparent),
+      boxShadow: isDark ? null : (customShadow ?? AppShadows.cardSoft),
     );
   }
 }

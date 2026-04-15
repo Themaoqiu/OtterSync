@@ -8,6 +8,8 @@ class AppSurface extends StatelessWidget {
     this.padding = const EdgeInsets.all(16),
     this.margin,
     this.color,
+    this.border,
+    this.customShadow,
     this.radius = AppSpace.radiusLarge,
   });
 
@@ -15,6 +17,8 @@ class AppSurface extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry? margin;
   final Color? color;
+  final Border? border;
+  final List<BoxShadow>? customShadow;
   final double radius;
 
   @override
@@ -22,7 +26,13 @@ class AppSurface extends StatelessWidget {
     return Container(
       margin: margin,
       padding: padding,
-      decoration: AppDecorations.surface(context, radius: radius, color: color),
+      decoration: AppDecorations.surface(
+        context,
+        radius: radius,
+        color: color,
+        border: border,
+        customShadow: customShadow,
+      ),
       child: child,
     );
   }

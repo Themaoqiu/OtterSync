@@ -24,10 +24,23 @@ class UserAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor ?? palette.avatar,
         shape: BoxShape.circle,
+        border: Border.all(
+          color: palette.surface, // White border to make overlapping look good
+          width: size > 32 ? 2.5 : 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: palette.shadow.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       alignment: Alignment.center,
       child: Text(
-        label,
+        label.length > 2
+            ? label.substring(0, 2).toUpperCase()
+            : label.toUpperCase(),
         style: TextStyle(
           color: foregroundColor ?? const Color(0xFF09326C),
           fontWeight: FontWeight.w700,

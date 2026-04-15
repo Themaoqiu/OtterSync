@@ -20,51 +20,66 @@ class DashboardView extends StatelessWidget {
     return ListView(
       padding: AppSpace.pagePaddingWithNav,
       children: [
-        InkWell(
-          onTap: () => context.push('/account'),
-          borderRadius: BorderRadius.circular(999),
-          child: const Align(
-            alignment: Alignment.centerLeft,
-            child: UserAvatar(label: 'MT'),
-          ),
+        Row(
+          children: [
+            InkWell(
+              onTap: () => context.push('/account'),
+              borderRadius: BorderRadius.circular(999),
+              child: const UserAvatar(label: 'MT'),
+            ),
+            const Spacer(),
+          ],
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 24),
         Text('仪表板', style: theme.textTheme.headlineLarge),
-        const SizedBox(height: 18),
+        const SizedBox(height: 24),
         AppSurface(
+          padding: const EdgeInsets.all(0),
           child: InkWell(
+            borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
             onTap: () => showDemoFeedback(context, '仪表板切换接口已预留。'),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Default dashboard',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontSize: 24,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '默认仪表板',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: palette.textPrimary,
-                  size: 34,
-                ),
-              ],
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: palette.surfaceInset,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: palette.textSecondary,
+                      size: 24,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 24),
         AssignedIssuesCard(
           issues: JiraDemoData.assignedIssues,
           onIssueTap: (item) => showDemoFeedback(context, '将打开 ${item.key}。'),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 24),
         DashboardActivityCard(
           activities: JiraDemoData.dashboardActivities,
           onActivityTap: (item) =>
               showDemoFeedback(context, '将打开 ${item.issue} 的活动详情。'),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 24),
         DashboardFeedbackCard(
           onTap: () => showDemoFeedback(context, '反馈提交接口已预留。'),
         ),

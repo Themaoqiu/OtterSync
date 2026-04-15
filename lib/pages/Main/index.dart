@@ -28,30 +28,38 @@ class MainPage extends StatelessWidget {
     final palette = AppThemePalette.of(context);
 
     return Scaffold(
-      body: SafeArea(child: navigationShell),
+      body: SafeArea(bottom: false, child: navigationShell),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: palette.scaffold,
-          border: Border(top: BorderSide(color: palette.divider)),
+          color: palette.surface,
+          boxShadow: [
+            BoxShadow(
+              color: palette.shadow.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
+            ),
+          ],
         ),
-        child: NavigationBar(
-          selectedIndex: navigationShell.currentIndex,
-          backgroundColor: palette.scaffold,
-          destinations: _tabs
-              .map(
-                (tab) => NavigationDestination(
-                  icon: Icon(tab.icon),
-                  selectedIcon: Icon(tab.selectedIcon),
-                  label: tab.label,
-                ),
-              )
-              .toList(),
-          onDestinationSelected: (index) {
-            navigationShell.goBranch(
-              index,
-              initialLocation: index == navigationShell.currentIndex,
-            );
-          },
+        child: SafeArea(
+          child: NavigationBar(
+            selectedIndex: navigationShell.currentIndex,
+            backgroundColor: palette.surface,
+            destinations: _tabs
+                .map(
+                  (tab) => NavigationDestination(
+                    icon: Icon(tab.icon),
+                    selectedIcon: Icon(tab.selectedIcon),
+                    label: tab.label,
+                  ),
+                )
+                .toList(),
+            onDestinationSelected: (index) {
+              navigationShell.goBranch(
+                index,
+                initialLocation: index == navigationShell.currentIndex,
+              );
+            },
+          ),
         ),
       ),
     );

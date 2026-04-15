@@ -42,26 +42,31 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
-        side: BorderSide(color: palette.border),
+        side: brightness == Brightness.dark
+            ? BorderSide(color: palette.border)
+            : BorderSide.none,
       ),
     ),
     dividerColor: palette.divider,
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: palette.scaffold,
-      height: 82,
+      backgroundColor: palette.surface,
+      elevation: 8,
+      shadowColor: palette.shadow,
+      height: 76, // More compact bottom bar
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       labelTextStyle: WidgetStatePropertyAll(
         TextStyle(
           color: palette.textSecondary,
           fontSize: 12,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
         ),
       ),
-      indicatorColor: palette.primarySoft,
+      indicatorColor: palette.primarySoft.withValues(alpha: 0.7),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return IconThemeData(
-          color: selected ? palette.primary : palette.textSecondary,
-          size: 30,
+          color: selected ? palette.primary : palette.textTertiary,
+          size: 26,
         );
       }),
     ),
@@ -77,39 +82,50 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
     textTheme: TextTheme(
       headlineLarge: TextStyle(
         color: palette.textPrimary,
-        fontSize: 40,
-        fontWeight: FontWeight.w300,
-        letterSpacing: -1.1,
+        fontSize: 36,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.8,
       ),
       headlineMedium: TextStyle(
         color: palette.textPrimary,
-        fontSize: 24,
-        fontWeight: FontWeight.w400,
+        fontSize: 26,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.6,
       ),
       titleLarge: TextStyle(
         color: palette.textPrimary,
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: FontWeight.w600,
+        letterSpacing: -0.4,
       ),
       titleMedium: TextStyle(
         color: palette.textPrimary,
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: FontWeight.w600,
+        letterSpacing: -0.3,
       ),
       bodyLarge: TextStyle(
         color: palette.textPrimary,
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: FontWeight.w400,
+        letterSpacing: 0,
       ),
       bodyMedium: TextStyle(
         color: palette.textSecondary,
         fontSize: 14,
         fontWeight: FontWeight.w400,
+        letterSpacing: 0.1,
       ),
       bodySmall: TextStyle(
         color: palette.textTertiary,
-        fontSize: 12,
-        fontWeight: FontWeight.w400,
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.2,
+      ),
+      labelLarge: TextStyle(
+        color: palette.primary,
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
