@@ -15,9 +15,8 @@ class QuickAccessSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppThemePalette.of(context);
     final wideItem = items.first;
-    final gridItems = items.skip(1).toList();
+    final compactItems = items.skip(1).toList();
 
     return Column(
       children: [
@@ -25,24 +24,27 @@ class QuickAccessSection extends StatelessWidget {
           onTap: () => onItemTap(wideItem),
           child: AppSurface(
             margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(
               children: [
                 _FeatureIcon(icon: wideItem.icon, color: wideItem.color),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         wideItem.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         wideItem.subtitle,
                         style: const TextStyle(
                           color: Color(0xFF8E4BC3),
-                          fontSize: 16,
+                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -51,18 +53,18 @@ class QuickAccessSection extends StatelessWidget {
                 if (wideItem.badge != null)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+                      horizontal: 10,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: wideItem.color,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       wideItem.badge!,
                       style: TextStyle(
-                        color: palette.textPrimary,
-                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 13,
                       ),
                     ),
                   ),
@@ -77,28 +79,43 @@ class QuickAccessSection extends StatelessWidget {
             crossAxisCount: 2,
             mainAxisSpacing: 14,
             crossAxisSpacing: 14,
-            childAspectRatio: 1.2,
+            childAspectRatio: 2.55,
           ),
-          itemCount: gridItems.length,
+          itemCount: compactItems.length,
           itemBuilder: (context, index) {
-            final item = gridItems[index];
+            final item = compactItems[index];
             return InkWell(
               onTap: () => onItemTap(item),
               borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
               child: AppSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                child: Row(
                   children: [
                     _FeatureIcon(icon: item.icon, color: item.color),
-                    const Spacer(),
-                    Text(
-                      item.title,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -120,13 +137,13 @@ class _FeatureIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 56,
-      height: 56,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(icon, size: 32, color: const Color(0xFF6B3FA0)),
+      child: Icon(icon, size: 24, color: const Color(0xFF6B3FA0)),
     );
   }
 }

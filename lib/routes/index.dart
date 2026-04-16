@@ -132,7 +132,7 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
       filled: true,
       fillColor: palette.surface,
       hintStyle: TextStyle(color: palette.textSecondary, fontSize: 14),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppSpace.radius),
         borderSide: BorderSide(color: palette.border),

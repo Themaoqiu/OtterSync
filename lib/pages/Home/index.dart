@@ -9,8 +9,17 @@ import 'package:ottersync/components/Home/RecentProjectsCard.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_demo_data.dart';
 
-class HomeView extends StatelessWidget {
+class HomeView extends StatefulWidget {
   const HomeView({super.key});
+
+  @override
+  State<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<HomeView> {
+  bool _overviewExpanded = true;
+  bool _quickAccessExpanded = true;
+  bool _recentProjectsExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -128,13 +137,25 @@ class HomeView extends StatelessWidget {
             color: palette.textSecondary,
             size: 28,
           ),
+          expanded: _overviewExpanded,
+          onToggle: () => setState(() {
+            _overviewExpanded = !_overviewExpanded;
+          }),
         ),
-        const SizedBox(height: 16),
-        HomeOverviewCard(
-          onCopy: () => showDemoFeedback(context, '摘要内容复制接口已预留。'),
-          onLike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
-          onDislike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
-          onMore: () => showDemoFeedback(context, '更多动态接口已预留。'),
+        _HomeSectionBody(
+          expanded: _overviewExpanded,
+          child: Column(
+            children: [
+              const SizedBox(height: 16),
+              HomeOverviewCard(
+                onCopy: () => showDemoFeedback(context, '摘要内容复制接口已预留。'),
+                onLike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
+                onDislike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
+                onMore: () => showDemoFeedback(context, '更多动态接口已预留。'),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
         const SizedBox(height: 32),
         SectionHeader(
@@ -154,18 +175,28 @@ class HomeView extends StatelessWidget {
               ),
             ),
           ),
+          expanded: _quickAccessExpanded,
+          onToggle: () => setState(() {
+            _quickAccessExpanded = !_quickAccessExpanded;
+          }),
         ),
-        const SizedBox(height: 16),
-        QuickAccessSection(
-          items: JiraDemoData.homeQuickAccess,
-          onItemTap: (item) {
-            // Ripple added automatically inside item component
-            if (item.route != null) {
-              context.push(item.route!);
-              return;
-            }
-            showDemoFeedback(context, '${item.title} 交互入口已预留。');
-          },
+        _HomeSectionBody(
+          expanded: _quickAccessExpanded,
+          child: Column(
+            children: [
+              const SizedBox(height: 16),
+              QuickAccessSection(
+                items: JiraDemoData.homeQuickAccess,
+                onItemTap: (item) {
+                  if (item.route != null) {
+                    context.push(item.route!);
+                    return;
+                  }
+                  showDemoFeedback(context, '${item.title} 交互入口已预留。');
+                },
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 32),
         SectionHeader(
@@ -175,23 +206,69 @@ class HomeView extends StatelessWidget {
             color: palette.textSecondary,
             size: 28,
           ),
+          expanded: _recentProjectsExpanded,
+          onToggle: () => setState(() {
+            _recentProjectsExpanded = !_recentProjectsExpanded;
+          }),
         ),
-        const SizedBox(height: 12),
-        Text(
-          '今天',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: palette.textSecondary,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
+        _HomeSectionBody(
+          expanded: _recentProjectsExpanded,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 12),
+              Text(
+                '今天',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: palette.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 12),
+              RecentProjectsCard(
+                items: JiraDemoData.recentProjects,
+                onItemTap: (item) =>
+                    showDemoFeedback(context, '将打开 ${item.key} 的详情页。'),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
-        RecentProjectsCard(
-          items: JiraDemoData.recentProjects,
-          onItemTap: (item) =>
-              showDemoFeedback(context, '将打开 ${item.key} 的详情页。'),
-        ),
       ],
+    );
+  }
+}
+
+class _HomeSectionBody extends StatelessWidget {
+  const _HomeSectionBody({required this.expanded, required this.child});
+
+  final bool expanded;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 280),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final sizeAnimation = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+
+        return FadeTransition(
+          opacity: animation,
+          child: SizeTransition(
+            sizeFactor: sizeAnimation,
+            axisAlignment: -1,
+            child: child,
+          ),
+        );
+      },
+      child: expanded
+          ? KeyedSubtree(key: const ValueKey('expanded'), child: child)
+          : const SizedBox.shrink(key: ValueKey('collapsed')),
     );
   }
 }

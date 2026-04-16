@@ -39,10 +39,38 @@ abstract final class JiraDemoData {
   ];
 
   static const recentProjects = [
-    JiraIssueSummary(title: '使用毛球', key: 'OT-2', subtitle: 'ottersync'),
-    JiraIssueSummary(title: '我的打开事务', key: '筛选器', subtitle: '已查看'),
-    JiraIssueSummary(title: 'OT面板', key: '面板', subtitle: 'ottersync 内'),
-    JiraIssueSummary(title: '测试任务1', key: 'OT-1', subtitle: 'ottersync'),
+    JiraIssueSummary(
+      title: '使用毛球',
+      key: 'OT-2',
+      subtitle: 'ottersync',
+      icon: Icons.task_alt_rounded,
+      iconBackgroundColor: Color(0xFFD8E7FF),
+      iconColor: Color(0xFF0C66E4),
+    ),
+    JiraIssueSummary(
+      title: '我的打开事务',
+      key: '筛选器',
+      subtitle: '已查看',
+      icon: Icons.filter_alt_rounded,
+      iconBackgroundColor: Color(0xFFD8E7FF),
+      iconColor: Color(0xFF0C66E4),
+    ),
+    JiraIssueSummary(
+      title: 'OT面板',
+      key: '面板',
+      subtitle: 'ottersync 内',
+      icon: Icons.view_week_outlined,
+      iconBackgroundColor: Color(0xFFE9D5FF),
+      iconColor: Color(0xFF8E4BC3),
+    ),
+    JiraIssueSummary(
+      title: '测试任务1',
+      key: 'OT-1',
+      subtitle: 'ottersync',
+      icon: Icons.task_alt_rounded,
+      iconBackgroundColor: Color(0xFFD8E7FF),
+      iconColor: Color(0xFF0C66E4),
+    ),
   ];
 
   static const spaces = [JiraSpace(name: 'ottersync', key: 'OT')];

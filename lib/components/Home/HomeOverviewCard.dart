@@ -22,24 +22,24 @@ class HomeOverviewCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return AppSurface(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'No recent work activities found in the last 4 days.',
             style: theme.textTheme.headlineMedium?.copyWith(
-              fontSize: 27,
-              height: 1.35,
+              fontSize: 22,
+              height: 1.3,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Row(
             children: [
               Icon(
                 Icons.info_outline_rounded,
                 color: palette.textSecondary,
-                size: 22,
+                size: 20,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -56,6 +56,8 @@ class HomeOverviewCard extends StatelessWidget {
                   Icons.content_copy_outlined,
                   color: palette.textPrimary,
                 ),
+                iconSize: 20,
+                visualDensity: VisualDensity.compact,
               ),
               IconButton(
                 onPressed: onLike,
@@ -63,6 +65,8 @@ class HomeOverviewCard extends StatelessWidget {
                   Icons.thumb_up_alt_outlined,
                   color: palette.textPrimary,
                 ),
+                iconSize: 20,
+                visualDensity: VisualDensity.compact,
               ),
               IconButton(
                 onPressed: onDislike,
@@ -70,10 +74,12 @@ class HomeOverviewCard extends StatelessWidget {
                   Icons.thumb_down_alt_outlined,
                   color: palette.textPrimary,
                 ),
+                iconSize: 20,
+                visualDensity: VisualDensity.compact,
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           TextButton(onPressed: onMore, child: const Text('查看更多')),
         ],
       ),

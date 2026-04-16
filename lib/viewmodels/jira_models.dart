@@ -25,6 +25,9 @@ class JiraIssueSummary {
     this.subtitle,
     this.status,
     this.assigneeInitials,
+    this.icon,
+    this.iconBackgroundColor,
+    this.iconColor,
   });
 
   final String title;
@@ -32,6 +35,9 @@ class JiraIssueSummary {
   final String? subtitle;
   final String? status;
   final String? assigneeInitials;
+  final IconData? icon;
+  final Color? iconBackgroundColor;
+  final Color? iconColor;
 }
 
 class JiraSpace {
