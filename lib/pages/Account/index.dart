@@ -37,10 +37,7 @@ class AccountView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
-        title: Text(
-          '账户中心',
-          style: theme.textTheme.headlineMedium,
-        ),
+        title: Text('账户中心', style: theme.textTheme.headlineMedium),
         centerTitle: true,
       ),
       body: ListView(

@@ -43,7 +43,7 @@ class _HomeViewState extends State<HomeView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('早上好!', style: theme.textTheme.bodyMedium),
-                  Text('Themaoqiu', style: theme.textTheme.headlineMedium),
+                  Text('Themaoqiu', style: theme.textTheme.titleMedium),
                 ],
               ),
             ),
@@ -74,6 +74,7 @@ class _HomeViewState extends State<HomeView> {
           ],
         ),
         const SizedBox(height: 24),
+        
         Container(
           decoration: BoxDecoration(
             boxShadow: [

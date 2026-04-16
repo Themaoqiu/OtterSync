@@ -1,97 +1,184 @@
-# OtterSync
+# 🦦 OtterSync
 
-OtterSync 是一个基于 Flutter 的项目协作原型应用，围绕**任务流转、团队协作治理、AI 执行闭环和数据分析看板**构建。
+OtterSync 是一个现代化的团队协作与项目管理平台，主要功能复刻自Jira Mobile，使用 Flutter + Python 的全栈技术栈。
 
-## 项目定位
+## 1. 快速开始
 
-当前版本面向“复杂流程可演示”的原型验证，重点覆盖：
+### 1.1 Skills
 
-- **完成度分层**：产品完整性 / 业务完整性 / 工程完整性
-- **统一状态模型**：项目、任务、成员、动态、审计、AI 建议统一管理
-- **业务闭环**：任务创建、状态流转、风险标记、历史追踪
-- **协作治理**：权限矩阵、项目策略、操作审计、动态事件流
-- **AI 闭环**：建议生成 → 人工确认 → 执行回写
-- **多维分析**：交付趋势、流程状态、风险分布、成员负载
+仓库内置前后端开发约束，位于 `skills/`：
 
-## 核心功能模块
+- `skills/ottersync-flutter-style/SKILL.md`：Flutter 代码风格、目录组织和 UI 约定
+- `skills/ottersync-python-backend/SKILL.md`：Python 后端架构、依赖管理和 clean code 约定
 
-应用采用底部 5 Tab 导航：
+### 1.2 前端开发
 
-1. **项目**：任务筛选、快速新增、项目进度与完成度分层展示  
-2. **工作区**：成员状态、角色权限矩阵、项目授权策略、审计与动态  
-3. **AI**：对话交互、Prompt 模板、执行建议确认与回写  
-4. **分析**：指标总览、趋势图、状态分布、风险与负载分析  
-5. **我的**：个人任务/工时/风险与工程基线信息聚合
+前端代码位于 `lib/`，使用 Flutter 框架开发。
 
-## 技术栈
+安装依赖：
 
-- Flutter
-- Dart（`sdk: ^3.11.1`）
-- Material 3
-- `ChangeNotifier` + `InheritedNotifier`（`AppState` / `AppStateScope`）
+```bash
+flutter pub get
+```
 
-## 代码风格约定
+运行应用：
 
-- Flutter 代码风格、目录拆分、入口组织和路由约定以 [skills/ottersync-flutter-style/SKILL.md](/skills/ottersync-flutter-style/SKILL.md) 为准。
-- 结构性调整前应同时参考 [skills/ottersync-flutter-style/references/clean_style.md](/skills/ottersync-flutter-style/references/clean_style.md)。
-- 默认遵循浅层目录拆分：`pages/` 放页面，`components/` 放可复用或页面级 UI 区块，`routes/` 放应用入口与路由，`viewmodels/` 仅在需要轻量结构化数据时引入。
-- `main.dart` 仅负责 `runApp(getRootWidget())`，根组件装配保持在 `lib/routes/index.dart`。
-- 页面目录沿用 `lib/pages/<Feature>/index.dart`，组件按功能归档到 `lib/components/<Feature>/`，优先使用 `package:` 导入。
+```bash
+flutter run
+```
 
-## 目录结构
+检查与测试：
+
+```bash
+flutter analyze
+flutter test
+```
+
+### 1.3 后端开发
+
+后端目录位于 `src/`，使用 `uv` 管理 Python 环境和依赖。
+
+安装 `uv`：
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+或：
+
+```bash
+# macos
+brew install uv
+```
+
+同步环境：
+
+```bash
+cd src
+uv sync
+```
+
+激活环境：
+
+```bash
+source .venv/bin/activate
+```
+
+新增依赖：
+
+```bash
+uv add fastapi sqlmodel uvicorn pydantic-settings
+```
+
+删除依赖：
+
+```bash
+uv remove <package_name>
+```
+
+不要使用：
+
+```bash
+uv pip install
+```
+
+运行后端：
+
+```bash
+cd src
+uv run python main.py
+```
+
+推荐技术栈：
+
+- `fastapi`
+- `sqlmodel`
+- `uvicorn`
+- `pytest`
+- `ruff`
+- `mypy`
+
+## 2. 代码结构
+
+### 2.1 前端结构
 
 ```text
 lib/
-├── main.dart              # 应用入口
-├── components/            # 可复用或页面级 UI 区块
-├── routes/                # 根组件与主题配置
-├── state/                 # 全局状态与业务模型
+├── main.dart
+├── components/
+│   ├── Account/
+│   ├── AllWork/
+│   ├── Common/
+│   ├── Dashboard/
+│   ├── Home/
+│   ├── SpaceDetails/
+│   └── Spaces/
 ├── pages/
-│   ├── Main/              # 5 Tab 主框架
-│   ├── Home/              # 项目页
-│   ├── Workspace/         # 工作区页
-│   ├── AI/                # AI 页
-│   ├── Dashboard/         # 分析页
-│   └── My/                # 我的页
-└── theme/                 # 设计令牌
-skills/
-└── ottersync-flutter-style/
-    ├── SKILL.md           # 当前仓库 Flutter 风格基准
-    └── references/        # 对齐 test_project 的补充说明
-test/
-└── app_state_test.dart    # 关键状态流转测试
+│   ├── Account/
+│   ├── AllWork/
+│   ├── Dashboard/
+│   ├── Home/
+│   ├── Main/
+│   ├── Notifications/
+│   ├── SpaceDetails/
+│   └── Spaces/
+├── routes/
+│   └── index.dart
+├── state/
+│   └── theme_controller.dart
+├── theme/
+│   └── design_tokens.dart
+└── viewmodels/
+    ├── jira_demo_data.dart
+    └── jira_models.dart
 ```
 
-## 快速开始
+### 2.2 后端结构
 
-1. 安装 Flutter SDK（需满足 `pubspec.yaml` 中 Dart 版本约束）
-2. 获取依赖：
+```text
+src/
+├── adaptors                         # repository的具体实现
+│   ├── __init__.py
+│   └── sqlite                       # repository的sqlite数据库存储的具体实现
+│       ├── __init__.py
+│       ├── model.py
+│       └── sqlite_adaptor.py
+├── application                      # 对于service的应用层，这个部分是对service(业务逻辑的封装)，提供给外部一个可用的接口、复杂的cli等
+│   ├── perception_loop.py
+│   └── stroge.py
+├── entity                           # 核心业务实体模型(model)，它是最核心的东西，repository/service的输入输出都是它(或者简单类型例如str/boolean)
+│   ├── __init__.py
+├── generated                        # 从外部schema生成的model，一部分直接可以被抽成entity(这么做是偷懒减少工作量，没有再写一遍直接import)
+│   ├── __init__.py
+│   ├── model.py
+│   ├── perception_model.py
+│   └── types.py
+├── __init__.py
+├── repository.py                    # 存储、外部数据源的抽象层
+├── service                          # 核心业务逻辑，不依赖任何外部框架，例如orm、flask、fastapi等，只写业务，它依赖repository(抽象的，而不是adaptor)/entity
+│   ├── __init__.py
+│   └── storage.py
+└── utils                            # 业务不强相关的工具函数
+    ├── config.py
+    ├── __init__.py
+    └── s3_client.py
+```
 
-   ```bash
-   flutter pub get
-   ```
+## 3. 开发约束
 
-3. 运行应用：
+### 3.1 前端
 
-   ```bash
-   flutter run
-   ```
+- 页面放在 `lib/pages/<Feature>/index.dart`
+- 可复用 UI 放在 `lib/components/<Feature>/`
+- 入口和路由集中在 `lib/routes/index.dart`
+- 优先使用 `package:` 导入
 
-## 开发与测试
+### 3.2 后端
 
-- 静态检查：
-
-  ```bash
-  flutter analyze
-  ```
-
-- 运行测试：
-
-  ```bash
-  flutter test
-  ```
-
-## 说明
-
-- 当前仓库为原型工程，数据以内存状态为主（`AppState`）。
-- 可在此基础上继续扩展后端 API、持久化和权限系统。
+- 先定义 `entity` 和 `repository` 抽象，再写 `service`
+- `service` 不依赖具体框架，只依赖抽象和实体
+- `adaptors` 放 sqlite、s3、第三方 API 等具体实现
+- FastAPI 只做路由和依赖注入，不写业务逻辑
+- SQLModel 只放在边界层，不进入核心业务逻辑
+- 新增依赖必须使用 `uv add`，不要使用 `uv pip install`
+- 有行为变化就补测试，避免宽泛异常捕获和深层嵌套
