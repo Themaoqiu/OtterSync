@@ -10,8 +10,8 @@ class AssignedIssuesCard extends StatelessWidget {
     required this.onIssueTap,
   });
 
-  final List<JiraIssueSummary> issues;
-  final ValueChanged<JiraIssueSummary> onIssueTap;
+  final List<IssueSummary> issues;
+  final ValueChanged<IssueSummary> onIssueTap;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +22,7 @@ class AssignedIssuesCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('分配给我', style: theme.textTheme.headlineMedium),
+          Text('分配给我', style: theme.textTheme.titleLarge),
           const SizedBox(height: 24),
           Row(
             children: [
@@ -54,16 +54,13 @@ class AssignedIssuesCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 18),
                     Expanded(
-                      child: Text(
-                        item.key,
-                        style: theme.textTheme.headlineMedium,
-                      ),
+                      child: Text(item.key, style: theme.textTheme.titleMedium),
                     ),
                     Expanded(
                       child: Text(
                         item.title,
                         textAlign: TextAlign.right,
-                        style: theme.textTheme.headlineMedium,
+                        style: theme.textTheme.titleMedium,
                       ),
                     ),
                   ],

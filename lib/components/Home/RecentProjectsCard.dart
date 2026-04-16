@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ottersync/components/Common/AppSurface.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
 
@@ -9,20 +10,17 @@ class RecentProjectsCard extends StatelessWidget {
     required this.onItemTap,
   });
 
-  final List<JiraIssueSummary> items;
-  final ValueChanged<JiraIssueSummary> onItemTap;
+  final List<IssueSummary> items;
+  final ValueChanged<IssueSummary> onItemTap;
 
   @override
   Widget build(BuildContext context) {
     final palette = AppThemePalette.of(context);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
-      decoration: AppDecorations.surface(
-        context,
-        radius: 28,
-        customShadow: AppShadows.dialog,
-      ),
+    return AppSurface(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      radius: 14,
+      customShadow: AppShadows.cardSoft,
       child: Column(
         children: items
             .asMap()
@@ -36,10 +34,7 @@ class RecentProjectsCard extends StatelessWidget {
                   ),
                   if (entry.key != items.length - 1)
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 26,
-                        vertical: 14,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: Divider(
                         height: 1,
                         thickness: 1,
@@ -58,7 +53,7 @@ class RecentProjectsCard extends StatelessWidget {
 class _RecentProjectRow extends StatelessWidget {
   const _RecentProjectRow({required this.item, required this.onTap});
 
-  final JiraIssueSummary item;
+  final IssueSummary item;
   final VoidCallback onTap;
 
   @override
@@ -70,17 +65,13 @@ class _RecentProjectRow extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(26),
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
-          decoration: BoxDecoration(
-            color: palette.surfaceRaised.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(26),
-          ),
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           child: Row(
             children: [
               _RecentProjectIcon(item: item),
-              const SizedBox(width: 18),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,20 +80,21 @@ class _RecentProjectRow extends StatelessWidget {
                       item.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.headlineSmall?.copyWith(
+                      style: theme.textTheme.titleMedium?.copyWith(
                         color: palette.textPrimary,
-                        fontWeight: FontWeight.w700,
-                        height: 1.08,
+                        height: 1.1,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 2),
+
                     Text(
                       '${item.key} • ${item.subtitle ?? ''}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: palette.textSecondary,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                        height: 1.15,
                       ),
                     ),
                   ],
@@ -119,7 +111,7 @@ class _RecentProjectRow extends StatelessWidget {
 class _RecentProjectIcon extends StatelessWidget {
   const _RecentProjectIcon({required this.item});
 
-  final JiraIssueSummary item;
+  final IssueSummary item;
 
   @override
   Widget build(BuildContext context) {
@@ -129,16 +121,16 @@ class _RecentProjectIcon extends StatelessWidget {
         item.iconBackgroundColor ?? palette.primarySoft.withValues(alpha: 0.75);
 
     return Container(
-      width: 56,
-      height: 56,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Icon(
         item.icon ?? Icons.task_alt_rounded,
         color: iconColor,
-        size: 32,
+        size: 26,
       ),
     );
   }

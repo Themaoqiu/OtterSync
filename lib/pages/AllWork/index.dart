@@ -38,7 +38,9 @@ class _AllWorkViewState extends State<AllWorkView> {
               child: const UserAvatar(label: 'MT'),
             ),
             const SizedBox(width: 16),
-            Expanded(child: Text('所有工作', style: theme.textTheme.headlineLarge)),
+            Expanded(
+              child: Text('所有工作', style: theme.textTheme.headlineMedium),
+            ),
             Container(
               width: 44,
               height: 44,
@@ -92,7 +94,7 @@ class _AllWorkViewState extends State<AllWorkView> {
           onViewModeChanged: (mode) => setState(() => _viewMode = mode),
         ),
         const SizedBox(height: 32),
-        Text('待办', style: theme.textTheme.headlineMedium),
+        Text('待办', style: theme.textTheme.titleLarge),
         const SizedBox(height: 16),
         _viewMode == AllWorkViewMode.list
             ? Column(

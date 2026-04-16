@@ -47,7 +47,7 @@ class AccountActionList extends StatelessWidget {
                     ),
                     title: Text(
                       entry.value.title,
-                      style: theme.textTheme.headlineMedium,
+                      style: theme.textTheme.bodyLarge?.copyWith(fontSize: 18),
                     ),
                   ),
                   if (entry.key != items.length - 1)

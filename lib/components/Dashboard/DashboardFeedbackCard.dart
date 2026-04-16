@@ -16,7 +16,7 @@ class DashboardFeedbackCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('您似乎缺少某些小工具', style: theme.textTheme.headlineMedium),
+          Text('您似乎缺少某些小工具', style: theme.textTheme.titleLarge),
           const SizedBox(height: 18),
           Text(
             '我们正在为移动设备上的仪表板构建更多小工具。请告诉我们您需要哪些小工具。',
@@ -27,7 +27,9 @@ class DashboardFeedbackCard extends StatelessWidget {
             onTap: onTap,
             child: Text(
               '发送反馈',
-              style: TextStyle(color: palette.primary, fontSize: 18),
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: palette.primary,
+              ),
             ),
           ),
         ],

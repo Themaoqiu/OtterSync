@@ -39,7 +39,7 @@ abstract final class JiraDemoData {
   ];
 
   static const recentProjects = [
-    JiraIssueSummary(
+    IssueSummary(
       title: '使用毛球',
       key: 'OT-2',
       subtitle: 'ottersync',
@@ -47,7 +47,7 @@ abstract final class JiraDemoData {
       iconBackgroundColor: Color(0xFFD8E7FF),
       iconColor: Color(0xFF0C66E4),
     ),
-    JiraIssueSummary(
+    IssueSummary(
       title: '我的打开事务',
       key: '筛选器',
       subtitle: '已查看',
@@ -55,7 +55,7 @@ abstract final class JiraDemoData {
       iconBackgroundColor: Color(0xFFD8E7FF),
       iconColor: Color(0xFF0C66E4),
     ),
-    JiraIssueSummary(
+    IssueSummary(
       title: 'OT面板',
       key: '面板',
       subtitle: 'ottersync 内',
@@ -63,7 +63,7 @@ abstract final class JiraDemoData {
       iconBackgroundColor: Color(0xFFE9D5FF),
       iconColor: Color(0xFF8E4BC3),
     ),
-    JiraIssueSummary(
+    IssueSummary(
       title: '测试任务1',
       key: 'OT-1',
       subtitle: 'ottersync',
@@ -114,7 +114,7 @@ abstract final class JiraDemoData {
       inProgressCount: 0,
       doneCount: 0,
       items: [
-        JiraIssueSummary(
+        IssueSummary(
           title: '使用毛球',
           key: 'OT-2',
           status: '待办',
@@ -129,7 +129,7 @@ abstract final class JiraDemoData {
       inProgressCount: 0,
       doneCount: 0,
       items: [
-        JiraIssueSummary(
+        IssueSummary(
           title: '测试任务1',
           key: 'OT-1',
           status: '待办',
@@ -152,8 +152,8 @@ abstract final class JiraDemoData {
   ];
 
   static const assignedIssues = [
-    JiraIssueSummary(title: '测试', key: 'OT-1'),
-    JiraIssueSummary(title: '使用', key: 'OT-2'),
+    IssueSummary(title: '测试', key: 'OT-1'),
+    IssueSummary(title: '使用', key: 'OT-2'),
   ];
 
   static const dashboardActivities = [

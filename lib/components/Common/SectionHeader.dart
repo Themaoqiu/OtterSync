@@ -20,7 +20,6 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = AppThemePalette.of(context);
 
     return Row(
       children: [
@@ -28,14 +27,8 @@ class SectionHeader extends StatelessWidget {
           child: Text(
             title,
             style: compact
-                ? theme.textTheme.titleMedium?.copyWith(
-                    color: palette.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  )
-                : theme.textTheme.titleLarge?.copyWith(
-                    color: palette.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
+                ? theme.textTheme.titleMedium
+                : theme.textTheme.titleLarge,
           ),
         ),
         if (action != null) ...[action!, const SizedBox(width: 6)],

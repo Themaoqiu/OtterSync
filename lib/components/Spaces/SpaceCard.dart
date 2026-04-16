@@ -12,18 +12,21 @@ class SpaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppThemePalette.of(context);
+    final theme = Theme.of(context);
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
+      borderRadius: BorderRadius.circular(14),
       child: AppSurface(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        radius: 14,
         child: Row(
           children: [
             Container(
-              width: 64,
-              height: 64,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 gradient: const LinearGradient(
                   colors: [Color(0xFF563FD6), Color(0xFF7C69EA)],
                   begin: Alignment.topLeft,
@@ -33,32 +36,24 @@ class SpaceCard extends StatelessWidget {
               child: const Icon(
                 Icons.thunderstorm_rounded,
                 color: Colors.white,
-                size: 36,
+                size: 26,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    space.name,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.headlineMedium?.copyWith(fontSize: 28),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    space.key,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
+                  Text(space.name, style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 2),
+                  Text(space.key, style: theme.textTheme.bodyMedium),
                 ],
               ),
             ),
             Icon(
               Icons.star_border_rounded,
               color: palette.textSecondary,
-              size: 34,
+              size: 24,
             ),
           ],
         ),

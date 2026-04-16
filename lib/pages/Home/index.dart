@@ -42,21 +42,8 @@ class _HomeViewState extends State<HomeView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '早上好!',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: palette.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    'Themaoqiu',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: palette.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
+                  Text('早上好!', style: theme.textTheme.bodyMedium),
+                  Text('Themaoqiu', style: theme.textTheme.headlineMedium),
                 ],
               ),
             ),
@@ -129,7 +116,7 @@ class _HomeViewState extends State<HomeView> {
             ),
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
         SectionHeader(
           title: '今日概述',
           action: Icon(
@@ -146,18 +133,18 @@ class _HomeViewState extends State<HomeView> {
           expanded: _overviewExpanded,
           child: Column(
             children: [
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               HomeOverviewCard(
                 onCopy: () => showDemoFeedback(context, '摘要内容复制接口已预留。'),
                 onLike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
                 onDislike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
                 onMore: () => showDemoFeedback(context, '更多动态接口已预留。'),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
             ],
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
         SectionHeader(
           title: '快速访问',
           action: InkWell(
@@ -167,10 +154,8 @@ class _HomeViewState extends State<HomeView> {
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
               child: Text(
                 '编辑',
-                style: TextStyle(
+                style: theme.textTheme.labelLarge?.copyWith(
                   color: palette.primary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -198,13 +183,13 @@ class _HomeViewState extends State<HomeView> {
             ],
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
         SectionHeader(
           title: '最近项目',
           action: Icon(
             Icons.more_horiz_rounded,
             color: palette.textSecondary,
-            size: 28,
+            size: 24,
           ),
           expanded: _recentProjectsExpanded,
           onToggle: () => setState(() {
@@ -216,16 +201,15 @@ class _HomeViewState extends State<HomeView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
                 '今天',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: palette.textSecondary,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
+                  letterSpacing: 0.2,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               RecentProjectsCard(
                 items: JiraDemoData.recentProjects,
                 onItemTap: (item) =>
@@ -249,12 +233,13 @@ class _HomeSectionBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 280),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
+      reverseDuration: const Duration(milliseconds: 280),
+      switchInCurve: Curves.easeInOutCubic,
+      switchOutCurve: Curves.easeInOutCubic,
       transitionBuilder: (child, animation) {
         final sizeAnimation = CurvedAnimation(
           parent: animation,
-          curve: Curves.easeOutCubic,
+          curve: Curves.easeInOutCubic,
         );
 
         return FadeTransition(

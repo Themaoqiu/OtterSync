@@ -77,7 +77,7 @@ class SpacesView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        Text('空间', style: theme.textTheme.headlineLarge),
+        Text('空间', style: theme.textTheme.headlineMedium),
         const SizedBox(height: 32),
         const SectionHeader(
           title: '最近查看',

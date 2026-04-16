@@ -31,7 +31,7 @@ class DashboardView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        Text('仪表板', style: theme.textTheme.headlineLarge),
+        Text('仪表板', style: theme.textTheme.headlineMedium),
         const SizedBox(height: 24),
         AppSurface(
           padding: const EdgeInsets.all(0),
@@ -43,13 +43,7 @@ class DashboardView extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      '默认仪表板',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: Text('默认仪表板', style: theme.textTheme.titleLarge),
                   ),
                   Container(
                     padding: const EdgeInsets.all(4),

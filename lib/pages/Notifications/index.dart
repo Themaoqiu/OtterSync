@@ -27,7 +27,7 @@ class NotificationsView extends StatelessWidget {
               child: const UserAvatar(label: 'MT'),
             ),
             const SizedBox(width: 16),
-            Expanded(child: Text('通知', style: theme.textTheme.headlineLarge)),
+            Expanded(child: Text('通知', style: theme.textTheme.headlineMedium)),
             Switch(
               value: themeController.isDarkMode,
               onChanged: (_) => themeController.toggle(),

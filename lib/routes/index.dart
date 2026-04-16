@@ -83,25 +83,25 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
       headlineLarge: TextStyle(
         color: palette.textPrimary,
         fontSize: 36,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w500,
         letterSpacing: -0.8,
       ),
       headlineMedium: TextStyle(
         color: palette.textPrimary,
         fontSize: 26,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w500,
         letterSpacing: -0.6,
       ),
       titleLarge: TextStyle(
         color: palette.textPrimary,
         fontSize: 22,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w400,
         letterSpacing: -0.4,
       ),
       titleMedium: TextStyle(
         color: palette.textPrimary,
         fontSize: 18,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w400,
         letterSpacing: -0.3,
       ),
       bodyLarge: TextStyle(
@@ -119,13 +119,13 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
       bodySmall: TextStyle(
         color: palette.textTertiary,
         fontSize: 13,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w400,
         letterSpacing: 0.2,
       ),
       labelLarge: TextStyle(
         color: palette.primary,
         fontSize: 14,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w400,
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(

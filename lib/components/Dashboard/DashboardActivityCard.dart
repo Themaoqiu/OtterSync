@@ -23,12 +23,9 @@ class DashboardActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('活动流', style: theme.textTheme.headlineMedium),
+          Text('活动流', style: theme.textTheme.titleLarge),
           const SizedBox(height: 18),
-          Text(
-            '今天',
-            style: theme.textTheme.headlineMedium?.copyWith(fontSize: 22),
-          ),
+          Text('今天', style: theme.textTheme.titleLarge),
           const SizedBox(height: 18),
           ...activities.asMap().entries.map(
             (entry) => Column(
@@ -48,15 +45,12 @@ class DashboardActivityCard extends StatelessWidget {
                               text: TextSpan(
                                 style: theme.textTheme.bodyLarge?.copyWith(
                                   color: palette.textPrimary,
-                                  fontSize: 18,
                                   height: 1.45,
                                 ),
                                 children: [
                                   const TextSpan(
                                     text: 'maoqiu The ',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                    style: TextStyle(),
                                   ),
                                   TextSpan(
                                     text: entry.value.text.replaceFirst(
@@ -70,9 +64,7 @@ class DashboardActivityCard extends StatelessWidget {
                             const SizedBox(height: 12),
                             Text(
                               entry.value.issue,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontSize: 18,
-                              ),
+                              style: theme.textTheme.bodyMedium,
                             ),
                             const SizedBox(height: 12),
                             Row(
@@ -85,9 +77,7 @@ class DashboardActivityCard extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 Text(
                                   entry.value.time,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontSize: 18,
-                                  ),
+                                  style: theme.textTheme.bodyMedium,
                                 ),
                               ],
                             ),

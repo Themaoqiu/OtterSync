@@ -28,10 +28,7 @@ class HomeOverviewCard extends StatelessWidget {
         children: [
           Text(
             'No recent work activities found in the last 4 days.',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontSize: 22,
-              height: 1.3,
-            ),
+            style: theme.textTheme.titleLarge?.copyWith(height: 1.3),
           ),
           const SizedBox(height: 14),
           Row(

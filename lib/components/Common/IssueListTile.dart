@@ -54,7 +54,6 @@ class IssueListTile extends StatelessWidget {
                         title,
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: palette.textPrimary,
-                          fontWeight: FontWeight.w600,
                           height: 1.2,
                         ),
                       ),
@@ -126,7 +125,6 @@ class _StatusBadge extends StatelessWidget {
         status.toUpperCase(),
         style: theme.textTheme.bodySmall?.copyWith(
           color: textColor,
-          fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
           fontSize: 10,
         ),

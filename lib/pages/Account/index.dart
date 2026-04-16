@@ -39,10 +39,7 @@ class AccountView extends StatelessWidget {
         leading: const BackButton(),
         title: Text(
           '账户中心',
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
+          style: theme.textTheme.headlineMedium,
         ),
         centerTitle: true,
       ),
@@ -58,7 +55,6 @@ class AccountView extends StatelessWidget {
             '工作区',
             style: theme.textTheme.bodySmall?.copyWith(
               color: palette.textSecondary,
-              fontWeight: FontWeight.w600,
               letterSpacing: 0.5,
             ),
           ),
@@ -74,7 +70,6 @@ class AccountView extends StatelessWidget {
             '首选项',
             style: theme.textTheme.bodySmall?.copyWith(
               color: palette.textSecondary,
-              fontWeight: FontWeight.w600,
               letterSpacing: 0.5,
             ),
           ),
@@ -89,7 +84,6 @@ class AccountView extends StatelessWidget {
             '关于',
             style: theme.textTheme.bodySmall?.copyWith(
               color: palette.textSecondary,
-              fontWeight: FontWeight.w600,
               letterSpacing: 0.5,
             ),
           ),
@@ -105,11 +99,7 @@ class AccountView extends StatelessWidget {
               onPressed: () => showDemoFeedback(context, '登出流程预留'),
               child: Text(
                 '退出登录',
-                style: TextStyle(
-                  color: palette.danger,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: palette.danger, fontSize: 16),
               ),
             ),
           ),

@@ -23,7 +23,7 @@ class AccountProfileCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('maoqiu The', style: theme.textTheme.headlineMedium),
+                Text('maoqiu The', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 6),
                 Text(
                   'themaoqiu@gmail.com',

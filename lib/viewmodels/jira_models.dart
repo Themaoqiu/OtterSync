@@ -18,8 +18,8 @@ class QuickAccessItem {
   final String? route;
 }
 
-class JiraIssueSummary {
-  const JiraIssueSummary({
+class IssueSummary {
+  const IssueSummary({
     required this.title,
     required this.key,
     this.subtitle,
@@ -104,5 +104,5 @@ class BacklogGroup {
   final int todoCount;
   final int inProgressCount;
   final int doneCount;
-  final List<JiraIssueSummary> items;
+  final List<IssueSummary> items;
 }
