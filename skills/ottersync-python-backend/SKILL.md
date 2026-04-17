@@ -98,6 +98,15 @@ src/
 - Prefer repository interfaces between service code and SQLModel-backed storage.
 - If a model is both a transport shape and a persistence shape, be explicit about that compromise instead of letting boundaries blur accidentally.
 
+## FastAPI and OpenAPI contract workflow
+
+- Treat FastAPI route declarations plus Pydantic models as the single source of truth for HTTP contracts.
+- Use FastAPI's generated OpenAPI schema to drive API docs, typed clients, or frontend code generation when it reduces duplicated request and response definitions.
+- Do not describe this as "no need to define interface parameters". The backend still must explicitly define paths, methods, request models, query/path parameters, response models, and error semantics.
+- Prefer keeping transport models explicit and stable so generated OpenAPI remains useful for downstream consumers.
+- When the frontend or another client needs typed integration, prefer generating client code or type definitions from `openapi.json` instead of manually duplicating the same shapes.
+- If generated client code is introduced, keep generation reproducible and document the command and source schema location in the repo.
+
 ## Clean code guardrails
 
 Apply these rules on every backend change:
