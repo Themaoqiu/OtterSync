@@ -24,7 +24,7 @@ flutter pub get
 运行应用：
 
 ```bash
-flutter run --dart-define=OTTERSYNC_API_BASE_URL=http://127.0.0.1:8001
+flutter run
 ```
 
 检查与测试：

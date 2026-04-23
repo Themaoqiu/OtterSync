@@ -107,6 +107,41 @@ src/
 - When the frontend or another client needs typed integration, prefer generating client code or type definitions from `openapi.json` instead of manually duplicating the same shapes.
 - If generated client code is introduced, keep generation reproducible and document the command and source schema location in the repo.
 
+## OtterSync OpenAPI generation rule
+
+For this repo, keep the OpenAPI export and Dart client generation workflow fixed and reproducible.
+
+- Start the FastAPI server from `src/` on port `8001`.
+- Export the schema from the running FastAPI app into `src/openapi.json`.
+- Generate the Dart client with `openapi-generator-cli` into `client/`.
+- Do not add ad-hoc schema post-processing scripts just to make Flutter generation pass. If generation breaks, fix the Python-side FastAPI/Pydantic schema definitions first so `openapi.json` itself is correct.
+- Do not hand-maintain duplicate Dart request/response models when the generated client already owns that contract.
+
+Use these commands:
+
+```bash
+cd src
+uv run uvicorn main:app --reload --port 8001
+```
+
+In another terminal from the repo root:
+
+```bash
+curl http://127.0.0.1:8001/openapi.json -o src/openapi.json
+
+uv run --project src openapi-generator-cli generate \
+  -i src/openapi.json \
+  -g dart \
+  -o client \
+  -p pubName=ottersync_openapi,pubAuthor=OtterSync,pubDescription="Generated OpenAPI client for the OtterSync backend.",pubVersion=0.1.0
+```
+
+Notes:
+
+- The API process and the `curl` export must use the same port. In this repo that default is `8001`.
+- Keep the generated Dart package under `client/` unless the repo is intentionally reorganized.
+- If a generated Dart file is invalid, inspect the corresponding OpenAPI schema in `src/openapi.json` and the FastAPI/Pydantic model definitions that produced it before changing generator settings.
+
 ## Clean code guardrails
 
 Apply these rules on every backend change:
