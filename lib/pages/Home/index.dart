@@ -63,7 +63,7 @@ class _HomeViewState extends State<HomeView> {
               ),
               child: IconButton(
                 padding: EdgeInsets.zero,
-                onPressed: () => showDemoFeedback(context, '创建工作项接口已预留。'),
+                onPressed: () => context.push('/create-work-item'),
                 icon: const Icon(
                   Icons.add_rounded,
                   color: Colors.white,
@@ -233,8 +233,8 @@ class _HomeSectionBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 280),
-      reverseDuration: const Duration(milliseconds: 280),
+      duration: const Duration(milliseconds: 400),
+      reverseDuration: const Duration(milliseconds: 400),
       switchInCurve: Curves.easeInOutCubic,
       switchOutCurve: Curves.easeInOutCubic,
       transitionBuilder: (child, animation) {

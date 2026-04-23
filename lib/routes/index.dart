@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ottersync/pages/Account/index.dart';
 import 'package:ottersync/pages/AllWork/index.dart';
+import 'package:ottersync/pages/CreateWorkItem/index.dart';
 import 'package:ottersync/pages/Dashboard/index.dart';
 import 'package:ottersync/pages/Home/index.dart';
 import 'package:ottersync/pages/Main/index.dart';
@@ -220,6 +221,10 @@ final GoRouter _rootRouter = GoRouter(
     GoRoute(
       path: '/space-details',
       builder: (context, state) => const SpaceDetailsView(),
+    ),
+    GoRoute(
+      path: '/create-work-item',
+      builder: (context, state) => const CreateWorkItemPage(),
     ),
   ],
 );

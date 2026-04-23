@@ -24,7 +24,7 @@ flutter pub get
 运行应用：
 
 ```bash
-flutter run
+flutter run --dart-define=OTTERSYNC_API_BASE_URL=http://127.0.0.1:8001
 ```
 
 检查与测试：
@@ -89,6 +89,21 @@ cd src
 uv run python main.py
 ```
 
+导出 OpenAPI 契约：
+
+```bash
+cd src
+uv run uv run uvicorn main:app --reload --port 8001
+curl http://127.0.0.1:8000/openapi.json -o src/openapi.json
+
+uv run --project src openapi-generator-cli generate \
+  -i src/openapi.json \ # 输入文件
+  -g dart \ # 生成器
+  -o client \ # 输出目录
+  -p pubName=ottersync_openapi,pubAuthor=OtterSync,pubDescription="Generated OpenAPI client for the OtterSync backend.",pubVersion=0.1.0 
+```
+
+
 推荐技术栈：
 
 - `fastapi`
@@ -97,6 +112,8 @@ uv run python main.py
 - `pytest`
 - `ruff`
 - `mypy`
+
+后端接口以 FastAPI + Pydantic 定义为唯一契约源，推荐前端直接基于 `openapi.json` 生成 Dart client / model，而不是手工同步字段。
 
 ## 2. 代码结构
 
