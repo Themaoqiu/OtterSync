@@ -17,8 +17,6 @@ class SpacesView extends StatelessWidget {
     final palette = AppThemePalette.of(context);
     final theme = Theme.of(context);
 
-    final isDark = theme.brightness == Brightness.dark;
-
     return ListView(
       padding: AppSpace.pagePaddingWithNav,
       children: [
@@ -30,49 +28,23 @@ class SpacesView extends StatelessWidget {
               child: const UserAvatar(label: 'MT'),
             ),
             const Spacer(),
-            Container(
-              width: 44,
-              height: 44,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                color: palette.surface,
-                shape: BoxShape.circle,
-                border: isDark ? Border.all(color: palette.border) : null,
-                boxShadow: isDark ? null : AppShadows.cardSoft,
+            IconButton(
+              onPressed: () => showDemoFeedback(context, '搜索空间接口已预留。'),
+              icon: Icon(
+                Icons.search_rounded,
+                color: palette.textSecondary,
+                size: 30,
               ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => showDemoFeedback(context, '搜索空间接口已预留。'),
-                icon: Icon(
-                  Icons.search_rounded,
-                  color: palette.textSecondary,
-                  size: 26,
-                ),
-              ),
+              tooltip: '搜索',
             ),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
+            IconButton(
+              onPressed: () => showDemoFeedback(context, '创建空间接口已预留。'),
+              icon: Icon(
+                Icons.add_rounded,
                 color: palette.primary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: palette.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                size: 30,
               ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => showDemoFeedback(context, '创建空间接口已预留。'),
-                icon: const Icon(
-                  Icons.add_rounded,
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ),
+              tooltip: '创建空间',
             ),
           ],
         ),

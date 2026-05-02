@@ -1,1 +1,0 @@
-"""SQLite adaptor implementation."""

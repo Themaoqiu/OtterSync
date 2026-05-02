@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "840014416024",
+    "project_id": "ottersync-b4833",
+    "storage_bucket": "ottersync-b4833.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:840014416024:android:c044f6a6a5c5907629a8ed",
+        "android_client_info": {
+          "package_name": "com.example.ottersync"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzgVw__jgM4ohvO5191_uWudkqWhEjCcg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

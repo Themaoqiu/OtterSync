@@ -52,48 +52,23 @@ class _AllWorkViewState extends State<AllWorkView> {
             Expanded(
               child: Text('所有工作', style: theme.textTheme.headlineMedium),
             ),
-            Container(
-              width: 44,
-              height: 44,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                color: palette.surface,
-                shape: BoxShape.circle,
-                boxShadow: AppShadows.cardSoft,
+            IconButton(
+              onPressed: () => showDemoFeedback(context, '搜索工作项接口已预留。'),
+              icon: Icon(
+                Icons.search_rounded,
+                color: palette.textSecondary,
+                size: 30,
               ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => showDemoFeedback(context, '搜索工作项接口已预留。'),
-                icon: Icon(
-                  Icons.search_rounded,
-                  color: palette.textSecondary,
-                  size: 26,
-                ),
-              ),
+              tooltip: '搜索',
             ),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
+            IconButton(
+              onPressed: _openCreatePage,
+              icon: Icon(
+                Icons.add_rounded,
                 color: palette.primary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: palette.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                size: 30,
               ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                onPressed: _openCreatePage,
-                icon: const Icon(
-                  Icons.add_rounded,
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ),
+              tooltip: '创建工作项',
             ),
           ],
         ),

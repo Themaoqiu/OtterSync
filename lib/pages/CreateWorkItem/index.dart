@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ottersync/components/CreateWorkItem/CreateWorkItemAttachmentsSection.dart';
+import 'package:ottersync/components/CreateWorkItem/CreateWorkItemLoadError.dart';
+import 'package:ottersync/components/CreateWorkItem/CreateWorkItemMoreFieldsSection.dart';
+import 'package:ottersync/components/CreateWorkItem/CreateWorkItemSectionCard.dart';
+import 'package:ottersync/components/CreateWorkItem/CreateWorkItemTopBar.dart';
+import 'package:ottersync/components/CreateWorkItem/TypeSelectorBar.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/work_item_api.dart';
@@ -26,8 +32,6 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
 
   bool _loading = true;
   bool _saving = false;
-  bool _descriptionExpanded = true;
-  bool _attachmentsExpanded = true;
   bool _moreExpanded = true;
   String? _loadError;
 
@@ -74,63 +78,34 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _loadError != null
-            ? _buildLoadError(context)
+            ? CreateWorkItemLoadError(
+                message: _loadError ?? '请检查 Firebase 配置和网络连接。',
+                onRetry: _loadInitialData,
+              )
             : ListView(
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
+                padding: AppSpace.pagePaddingWithNav,
                 children: [
-                  _buildTopBar(context),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _LookupPill(
-                          icon: Icons.hub_outlined,
-                          label: _selectedWorkspace?.title ?? '选择空间',
-                          subtitle: _selectedWorkspace?.subtitle,
-                          onTap: () async {
-                            final result = await _pickLookup(
-                              title: '选择空间',
-                              options: _workspaces,
-                              selected: _selectedWorkspace,
-                            );
-                            if (result != null) {
-                              setState(() {
-                                _selectedWorkspace = result;
-                                _selectedParent = null;
-                              });
-                              await _loadParentItems();
-                            }
-                          },
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Icon(
-                          Icons.play_arrow_rounded,
-                          color: palette.textTertiary,
-                          size: 18,
-                        ),
-                      ),
-                      Expanded(
-                        child: _LookupPill(
-                          icon: Icons.check_box_outlined,
-                          label: _selectedWorkType?.title ?? '选择类型',
-                          subtitle: _selectedWorkType?.subtitle,
-                          onTap: () async {
-                            final result = await _pickLookup(
-                              title: '选择工作类型',
-                              options: _workTypes,
-                              selected: _selectedWorkType,
-                            );
-                            if (result != null) {
-                              setState(() => _selectedWorkType = result);
-                            }
-                          },
-                        ),
-                      ),
-                    ],
+                  CreateWorkItemTopBar(
+                    saving: _saving,
+                    onClose: () => context.pop(),
+                    onSubmit: _submit,
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: AppSpace.sectionGap),
+                  TypeSelectorBar(
+                    workspace: _selectedWorkspace,
+                    workType: _selectedWorkType,
+                    workspaces: _workspaces,
+                    workTypes: _workTypes,
+                    onWorkspaceChanged: (value) => setState(() {
+                      _selectedWorkspace = value;
+                      _selectedParent = null;
+                    }),
+                    onWorkTypeChanged: (value) => setState(() {
+                      _selectedWorkType = value;
+                    }),
+                    onWorkspaceLoadParentItems: _loadParentItems,
+                  ),
+                  const SizedBox(height: AppSpace.sectionGap),
                   TextField(
                     controller: _summaryController,
                     maxLength: 200,
@@ -143,35 +118,13 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
+                      filled: false,
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                  const SizedBox(height: 18),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: _CircleIconButton(
-                      icon: Icons.person_outline_rounded,
-                      onTap: () async {
-                        final result = await _pickLookup(
-                          title: '选择处理人',
-                          options: _users,
-                          selected: _selectedAssignee,
-                          allowClear: true,
-                        );
-                        if (result != _selectedAssignee) {
-                          setState(() => _selectedAssignee = result);
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  _buildSectionCard(
-                    context,
+                  const SizedBox(height: AppSpace.sectionGap),
+                  CreateWorkItemSectionCard(
                     title: '描述',
-                    expanded: _descriptionExpanded,
-                    onToggle: () => setState(
-                      () => _descriptionExpanded = !_descriptionExpanded,
-                    ),
                     child: TextField(
                       controller: _descriptionController,
                       minLines: 4,
@@ -181,267 +134,97 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
+                        filled: false,
                         contentPadding: EdgeInsets.zero,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  _buildSectionCard(
-                    context,
-                    title: '附件',
-                    expanded: _attachmentsExpanded,
-                    onToggle: () => setState(
-                      () => _attachmentsExpanded = !_attachmentsExpanded,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: _saving ? null : _addAttachment,
-                          icon: const Icon(Icons.add_rounded),
-                          label: const Text('添加附件'),
-                        ),
-                        if (_attachments.isNotEmpty) ...[
-                          const SizedBox(height: 14),
-                          ..._attachments.asMap().entries.map(
-                            (entry) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _AttachmentTile(
-                                attachment: entry.value,
-                                onDelete: _saving
-                                    ? null
-                                    : () {
-                                        setState(
-                                          () => _attachments.removeAt(entry.key),
-                                        );
-                                      },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                  const SizedBox(height: AppSpace.sectionGap),
+                  CreateWorkItemAttachmentsSection(
+                    attachments: _attachments,
+                    saving: _saving,
+                    onAddPhoto: () =>
+                        _addAttachment(initialKind: AttachmentKind.photo),
+                    onAddVideo: () =>
+                        _addAttachment(initialKind: AttachmentKind.video),
+                    onAddDocument: () =>
+                        _addAttachment(initialKind: AttachmentKind.document),
+                    onAddScreen: () =>
+                        _addAttachment(initialKind: AttachmentKind.video),
+                    onDeleteAttachment: (index) {
+                      setState(() => _attachments.removeAt(index));
+                    },
                   ),
-                  const SizedBox(height: 16),
-                  _buildSectionCard(
-                    context,
-                    title: '更多字段',
+                  const SizedBox(height: AppSpace.sectionGap),
+                  CreateWorkItemMoreFieldsSection(
                     expanded: _moreExpanded,
                     onToggle: () =>
                         setState(() => _moreExpanded = !_moreExpanded),
-                    child: Column(
-                      children: [
-                        _FieldTile(
-                          title: '经办人',
-                          value: _selectedReporter?.title ?? '请选择',
-                          helper: _selectedReporter?.subtitle,
-                          leading: const Icon(Icons.person_outline_rounded),
-                          onTap: () async {
-                            final result = await _pickLookup(
-                              title: '选择经办人',
-                              options: _users,
-                              selected: _selectedReporter,
-                            );
-                            if (result != null) {
-                              setState(() => _selectedReporter = result);
-                            }
-                          },
-                        ),
-                        _FieldTile(
-                          title: '处理人',
-                          value: _selectedAssignee?.title ?? '无',
-                          helper: _selectedAssignee?.subtitle,
-                          leading: const Icon(Icons.assignment_ind_outlined),
-                          onTap: () async {
-                            final result = await _pickLookup(
-                              title: '选择处理人',
-                              options: _users,
-                              selected: _selectedAssignee,
-                              allowClear: true,
-                            );
-                            if (result != _selectedAssignee) {
-                              setState(() => _selectedAssignee = result);
-                            }
-                          },
-                        ),
-                        _FieldTile(
-                          title: '标签',
-                          value: _selectedLabelIds.isEmpty
-                              ? '无'
-                              : '${_selectedLabelIds.length} 个',
-                          helper: _selectedLabelNames.join('、'),
-                          leading: const Icon(Icons.sell_outlined),
-                          onTap: _toggleLabelSheet,
-                        ),
-                        _FieldTile(
-                          title: '父项',
-                          value: _selectedParent?.title ?? '无',
-                          helper: _selectedParent?.subtitle,
-                          leading: const Icon(Icons.account_tree_outlined),
-                          onTap: () async {
-                            final result = await _pickLookup(
-                              title: '选择父项',
-                              options: _parentItems,
-                              selected: _selectedParent,
-                              allowClear: true,
-                              emptyLabel: '当前空间暂无父项可选',
-                            );
-                            if (result != _selectedParent) {
-                              setState(() => _selectedParent = result);
-                            }
-                          },
-                        ),
-                        _FieldTile(
-                          title: '团队',
-                          value: _selectedTeam?.title ?? '无',
-                          helper: _selectedTeam?.subtitle,
-                          leading: const Icon(Icons.groups_2_outlined),
-                          onTap: () async {
-                            final result = await _pickLookup(
-                              title: '选择团队',
-                              options: _teams,
-                              selected: _selectedTeam,
-                              allowClear: true,
-                            );
-                            if (result != _selectedTeam) {
-                              setState(() => _selectedTeam = result);
-                            }
-                          },
-                        ),
-                        _FieldTile(
-                          title: '开始日期',
-                          value: _formatDate(_startDate) ?? '无',
-                          leading: const Icon(Icons.calendar_today_outlined),
-                          onTap: () => _pickDate(
-                            initial: _startDate,
-                            onPicked: (value) => setState(() => _startDate = value),
-                          ),
-                        ),
-                        _FieldTile(
-                          title: '截止日期',
-                          value: _formatDate(_dueDate) ?? '无',
-                          leading: const Icon(Icons.event_available_outlined),
-                          onTap: () => _pickDate(
-                            initial: _dueDate,
-                            onPicked: (value) => setState(() => _dueDate = value),
-                          ),
-                          showDivider: false,
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _newLabelsController,
-                          decoration: const InputDecoration(
-                            labelText: '新标签',
-                            hintText: '多个标签请用逗号分隔',
-                          ),
-                        ),
-                      ],
+                    reporter: _selectedReporter,
+                    assignee: _selectedAssignee,
+                    team: _selectedTeam,
+                    parent: _selectedParent,
+                    startDate: _startDate,
+                    dueDate: _dueDate,
+                    selectedLabelCount: _selectedLabelIds.length,
+                    selectedLabelNames: _selectedLabelNames,
+                    newLabelsController: _newLabelsController,
+                    onPickReporter: () async {
+                      final result = await _pickLookup(
+                        title: '选择经办人',
+                        options: _users,
+                        selected: _selectedReporter,
+                      );
+                      if (result != null) {
+                        setState(() => _selectedReporter = result);
+                      }
+                    },
+                    onPickAssignee: () async {
+                      final result = await _pickLookup(
+                        title: '选择处理人',
+                        options: _users,
+                        selected: _selectedAssignee,
+                        allowClear: true,
+                      );
+                      if (result != _selectedAssignee) {
+                        setState(() => _selectedAssignee = result);
+                      }
+                    },
+                    onPickLabels: _toggleLabelSheet,
+                    onPickParent: () async {
+                      final result = await _pickLookup(
+                        title: '选择父项',
+                        options: _parentItems,
+                        selected: _selectedParent,
+                        allowClear: true,
+                        emptyLabel: '当前空间暂无父项可选',
+                      );
+                      if (result != _selectedParent) {
+                        setState(() => _selectedParent = result);
+                      }
+                    },
+                    onPickTeam: () async {
+                      final result = await _pickLookup(
+                        title: '选择团队',
+                        options: _teams,
+                        selected: _selectedTeam,
+                        allowClear: true,
+                      );
+                      if (result != _selectedTeam) {
+                        setState(() => _selectedTeam = result);
+                      }
+                    },
+                    onPickStartDate: () => _pickDate(
+                      initial: _startDate,
+                      onPicked: (value) => setState(() => _startDate = value),
+                    ),
+                    onPickDueDate: () => _pickDate(
+                      initial: _dueDate,
+                      onPicked: (value) => setState(() => _dueDate = value),
                     ),
                   ),
                 ],
               ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Row(
-      children: [
-        _CircleIconButton(
-          icon: Icons.close_rounded,
-          onTap: _saving ? null : () => context.pop(),
-        ),
-        Expanded(
-          child: Center(
-            child: Text(
-              '创建',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        _CircleIconButton(
-          icon: Icons.check_rounded,
-          filled: true,
-          busy: _saving,
-          onTap: _saving ? null : _submit,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLoadError(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = AppThemePalette.of(context);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.cloud_off_rounded, color: palette.textTertiary, size: 40),
-            const SizedBox(height: 14),
-            Text('加载失败', style: theme.textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(
-              _loadError ?? '请检查后端服务是否已启动。',
-              style: theme.textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 18),
-            FilledButton(
-              onPressed: _loadInitialData,
-              child: const Text('重试'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionCard(
-    BuildContext context, {
-    required String title,
-    required bool expanded,
-    required VoidCallback onToggle,
-    required Widget child,
-  }) {
-    return AppSurface(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-      radius: 22,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(AppSpace.radius),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                AnimatedRotation(
-                  turns: expanded ? 0 : -0.25,
-                  duration: const Duration(milliseconds: 220),
-                  child: const Icon(Icons.expand_more_rounded),
-                ),
-              ],
-            ),
-          ),
-          if (expanded) ...[
-            const SizedBox(height: 18),
-            child,
-          ],
-        ],
       ),
     );
   }
@@ -506,7 +289,9 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
       _showSnackBar('请输入摘要');
       return;
     }
-    if (_selectedWorkspace == null || _selectedWorkType == null || _selectedReporter == null) {
+    if (_selectedWorkspace == null ||
+        _selectedWorkType == null ||
+        _selectedReporter == null) {
       _showSnackBar('请先选择空间、类型和经办人');
       return;
     }
@@ -549,12 +334,14 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
     }
   }
 
-  Future<void> _addAttachment() async {
+  Future<void> _addAttachment({
+    AttachmentKind initialKind = AttachmentKind.document,
+  }) async {
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
     final uriController = TextEditingController();
     final mimeTypeController = TextEditingController();
-    AttachmentKind selectedKind = AttachmentKind.document;
+    AttachmentKind selectedKind = initialKind;
 
     final result = await showDialog<AttachmentCreateRequest>(
       context: context,
@@ -648,50 +435,51 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        final palette = AppThemePalette.of(context);
         final theme = Theme.of(context);
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
             child: StatefulBuilder(
               builder: (context, setModalState) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('选择标签', style: theme.textTheme.titleLarge),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: _labels.map((label) {
-                        final isSelected = selected.contains(label.id);
-                        return FilterChip(
-                          label: Text(label.title),
-                          selected: isSelected,
-                          selectedColor: palette.primarySoft,
-                          checkmarkColor: palette.primary,
-                          onSelected: (value) {
-                            setModalState(() {
-                              if (value) {
-                                selected.add(label.id);
-                              } else {
-                                selected.remove(label.id);
-                              }
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: () => Navigator.of(context).pop(selected),
-                        child: const Text('完成'),
+                return AppSurface(
+                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+                  radius: AppSpace.radiusXLarge,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('选择标签', style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: _labels.map((label) {
+                          final isSelected = selected.contains(label.id);
+                          return FilterChip(
+                            label: Text(label.title),
+                            selected: isSelected,
+                            onSelected: (value) {
+                              setModalState(() {
+                                if (value) {
+                                  selected.add(label.id);
+                                } else {
+                                  selected.remove(label.id);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () => Navigator.of(context).pop(selected),
+                          child: const Text('完成'),
+                        ),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
@@ -738,49 +526,81 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
       builder: (context) {
         final theme = Theme.of(context);
         final screenHeight = MediaQuery.of(context).size.height;
+        final searchController = TextEditingController();
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: theme.textTheme.titleLarge),
-                const SizedBox(height: 12),
-                if (allowClear)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('清空'),
-                    onTap: () => Navigator.of(context).pop(null),
-                  ),
-                if (options.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Text(emptyLabel, style: theme.textTheme.bodyMedium),
-                  )
-                else
-                  SizedBox(
-                    height: screenHeight * 0.5,
-                    child: ListView.builder(
-                      itemCount: options.length,
-                      itemBuilder: (context, index) {
-                        final item = options[index];
-                        final isSelected = item.id == selected?.id;
-                        return ListTile(
+            child: StatefulBuilder(
+              builder: (context, setSheetState) {
+                final query = searchController.text.trim().toLowerCase();
+                final filtered = options
+                    .where((item) {
+                      if (query.isEmpty) {
+                        return true;
+                      }
+                      return item.title.toLowerCase().contains(query) ||
+                          (item.subtitle?.toLowerCase().contains(query) ??
+                              false);
+                    })
+                    .toList(growable: false);
+                return AppSurface(
+                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+                  radius: AppSpace.radiusXLarge,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: searchController,
+                        onChanged: (_) => setSheetState(() {}),
+                        decoration: InputDecoration(
+                          hintText: title == '选择空间' ? '搜索空间' : '搜索工作类型',
+                          prefixIcon: const Icon(Icons.search_rounded),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (allowClear)
+                        ListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: Text(item.title),
-                          subtitle: item.subtitle == null
-                              ? null
-                              : Text(item.subtitle!),
-                          trailing: isSelected
-                              ? const Icon(Icons.check_rounded)
-                              : null,
-                          onTap: () => Navigator.of(context).pop(item),
-                        );
-                      },
-                    ),
+                          title: const Text('清空'),
+                          onTap: () => Navigator.of(context).pop(null),
+                        ),
+                      if (filtered.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: Text(
+                            emptyLabel,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        )
+                      else
+                        SizedBox(
+                          height: screenHeight * 0.5,
+                          child: ListView.builder(
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) {
+                              final item = filtered[index];
+                              final isSelected = item.id == selected?.id;
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(item.title),
+                                subtitle: item.subtitle == null
+                                    ? null
+                                    : Text(item.subtitle!),
+                                trailing: isSelected
+                                    ? const Icon(Icons.check_rounded)
+                                    : null,
+                                onTap: () => Navigator.of(context).pop(item),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
                   ),
-              ],
+                );
+              },
             ),
           ),
         );
@@ -804,15 +624,6 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
         .toList();
   }
 
-  String? _formatDate(DateTime? value) {
-    if (value == null) {
-      return null;
-    }
-    final month = value.month.toString().padLeft(2, '0');
-    final day = value.day.toString().padLeft(2, '0');
-    return '${value.year}-$month-$day';
-  }
-
   String _attachmentKindLabel(AttachmentKind kind) {
     if (kind == AttachmentKind.photo) {
       return '图片';
@@ -831,241 +642,8 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
   }
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-}
-
-class _LookupPill extends StatelessWidget {
-  const _LookupPill({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.subtitle,
-  });
-
-  final IconData icon;
-  final String label;
-  final String? subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = AppThemePalette.of(context);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpace.radiusXLarge),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: palette.surface,
-          borderRadius: BorderRadius.circular(AppSpace.radiusXLarge),
-          boxShadow: AppShadows.cardSoft,
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: palette.primary, size: 22),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(label, style: theme.textTheme.titleMedium),
-                  if (subtitle != null)
-                    Text(
-                      subtitle!,
-                      style: theme.textTheme.bodySmall,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                ],
-              ),
-            ),
-            Icon(Icons.expand_more_rounded, color: palette.textSecondary),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CircleIconButton extends StatelessWidget {
-  const _CircleIconButton({
-    required this.icon,
-    this.onTap,
-    this.filled = false,
-    this.busy = false,
-  });
-
-  final IconData icon;
-  final VoidCallback? onTap;
-  final bool filled;
-  final bool busy;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppThemePalette.of(context);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpace.radiusFull),
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          color: filled ? palette.surfaceInset : palette.surface,
-          shape: BoxShape.circle,
-        ),
-        child: Center(
-          child: busy
-              ? SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.2,
-                    color: palette.primary,
-                  ),
-                )
-              : Icon(
-                  icon,
-                  color: onTap == null ? palette.textTertiary : palette.textPrimary,
-                  size: 28,
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FieldTile extends StatelessWidget {
-  const _FieldTile({
-    required this.title,
-    required this.value,
-    required this.leading,
-    required this.onTap,
-    this.helper,
-    this.showDivider = true,
-  });
-
-  final String title;
-  final String value;
-  final String? helper;
-  final Widget leading;
-  final VoidCallback onTap;
-  final bool showDivider;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = AppThemePalette.of(context);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpace.radius),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          border: showDivider
-              ? Border(bottom: BorderSide(color: palette.divider))
-              : null,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: palette.surfaceInset,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Center(
-                child: IconTheme(
-                  data: IconThemeData(color: palette.textSecondary),
-                  child: leading,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: theme.textTheme.bodyMedium),
-                  const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: value == '无' || value == '请选择'
-                          ? palette.textTertiary
-                          : palette.textPrimary,
-                    ),
-                  ),
-                  if (helper != null && helper!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      helper!,
-                      style: theme.textTheme.bodySmall,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded, color: palette.textTertiary),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AttachmentTile extends StatelessWidget {
-  const _AttachmentTile({required this.attachment, this.onDelete});
-
-  final AttachmentCreateRequest attachment;
-  final VoidCallback? onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = AppThemePalette.of(context);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: palette.surfaceInset,
-        borderRadius: BorderRadius.circular(AppSpace.radius),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.attach_file_rounded, color: palette.textSecondary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(attachment.name, style: theme.textTheme.bodyLarge),
-                const SizedBox(height: 2),
-                Text(
-                  '${attachment.kind.value} · ${attachment.uri}',
-                  style: theme.textTheme.bodySmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: onDelete,
-            icon: const Icon(Icons.delete_outline_rounded),
-          ),
-        ],
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }

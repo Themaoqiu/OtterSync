@@ -47,29 +47,14 @@ class _HomeViewState extends State<HomeView> {
                 ],
               ),
             ),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
+            IconButton(
+              onPressed: () => context.push('/create-work-item'),
+              icon: Icon(
+                Icons.add_rounded,
                 color: palette.primary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: palette.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                size: 30,
               ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => context.push('/create-work-item'),
-                icon: const Icon(
-                  Icons.add_rounded,
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ),
+              tooltip: '创建工作项目',
             ),
           ],
         ),
