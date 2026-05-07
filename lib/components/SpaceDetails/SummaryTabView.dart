@@ -53,9 +53,7 @@ class SummaryTabView extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     '${item.value} ${item.emphasis}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.headlineMedium?.copyWith(fontSize: 22),
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ],
               ),
@@ -88,7 +86,7 @@ class _StatusOverview extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('状态概述', style: Theme.of(context).textTheme.headlineMedium),
+        Text('状态概述', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 6),
         Text('在过去 14 天内', style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: 18),
@@ -113,16 +111,12 @@ class _StatusOverview extends StatelessWidget {
                   Expanded(
                     child: Text(
                       item.$1,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineMedium?.copyWith(fontSize: 24),
+                      style: Theme.of(context).textTheme.bodyLarge,
                     ),
                   ),
                   Text(
                     item.$3,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.headlineMedium?.copyWith(fontSize: 24),
+                    style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   const SizedBox(width: 4),
                   Icon(
@@ -158,10 +152,7 @@ class _DonutChart extends StatelessWidget {
           children: [
             Text(
               '2',
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                fontSize: 52,
-                fontWeight: FontWeight.w400,
-              ),
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 6),
             Text('工作项总数', style: Theme.of(context).textTheme.bodyMedium),
@@ -218,7 +209,7 @@ class _PriorityBreakdown extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('优先级细分', style: Theme.of(context).textTheme.headlineMedium),
+        Text('优先级细分', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 6),
         Text('在过去 14 天内', style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: 18),
@@ -244,7 +235,9 @@ class _PriorityBreakdown extends StatelessWidget {
                         const SizedBox(height: 12),
                         Text(
                           item.$2,
-                          style: TextStyle(color: item.$3, fontSize: 30),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: item.$3,
+                              ),
                         ),
                       ],
                     ),
@@ -265,14 +258,14 @@ class _PriorityBreakdown extends StatelessWidget {
                   children: [
                     Text(
                       item.$2,
-                      style: TextStyle(color: item.$3, fontSize: 26),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: item.$3,
+                          ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       item.$1,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(fontSize: 16),
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),

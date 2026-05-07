@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ottersync/viewmodels/jira_models.dart';
 
 enum AttachmentKind { photo, video, document }
 
@@ -68,6 +69,8 @@ class WorkItemCreateRequest {
     required this.workTypeId,
     required this.summary,
     required this.reporterId,
+    this.bucket = WorkItemBucket.backlog,
+    this.status = WorkItemStatus.todo,
     this.description,
     this.assigneeId,
     this.parentId,
@@ -82,6 +85,8 @@ class WorkItemCreateRequest {
   final int workspaceId;
   final int workTypeId;
   final String summary;
+  final WorkItemBucket bucket;
+  final WorkItemStatus status;
   final String? description;
   final int reporterId;
   final int? assigneeId;
@@ -94,6 +99,18 @@ class WorkItemCreateRequest {
   final List<AttachmentCreateRequest> attachments;
 }
 
+class WorkspaceCreateRequest {
+  const WorkspaceCreateRequest({
+    required this.name,
+    required this.key,
+    required this.template,
+  });
+
+  final String name;
+  final String key;
+  final String template;
+}
+
 class WorkItemResponse {
   const WorkItemResponse({
     required this.id,
@@ -103,27 +120,37 @@ class WorkItemResponse {
     required this.reporter,
     required this.labels,
     required this.attachments,
+    required this.key,
+    required this.bucket,
+    required this.status,
     this.description,
     this.assignee,
     this.parent,
     this.team,
     this.dueDate,
     this.startDate,
+    this.createdAt,
+    this.lastViewedAt,
   });
 
   factory WorkItemResponse.fromMap(Map<String, dynamic> map) {
     return WorkItemResponse(
       id: (map['id'] as num).toInt(),
       summary: map['summary'] as String? ?? '',
+      key: map['key'] as String? ?? '',
       description: map['description'] as String?,
       workspace: LookupOption.fromMap(Map<String, dynamic>.from(map['workspace'] as Map)),
       workType: LookupOption.fromMap(Map<String, dynamic>.from(map['workType'] as Map)),
       reporter: LookupOption.fromMap(Map<String, dynamic>.from(map['reporter'] as Map)),
+      bucket: _workItemBucketFromString(map['bucket'] as String?),
+      status: _workItemStatusFromString(map['status'] as String?),
       assignee: _lookupOrNull(map['assignee']),
       parent: _lookupOrNull(map['parent']),
       team: _lookupOrNull(map['team']),
       dueDate: _dateTimeOrNull(map['dueDate']),
       startDate: _dateTimeOrNull(map['startDate']),
+      createdAt: _dateTimeOrNull(map['createdAt']),
+      lastViewedAt: _dateTimeOrNull(map['lastViewedAt']),
       labels: (map['labels'] as List<dynamic>? ?? const [])
           .map((item) => LookupOption.fromMap(Map<String, dynamic>.from(item as Map)))
           .toList(),
@@ -135,15 +162,20 @@ class WorkItemResponse {
 
   final int id;
   final String summary;
+  final String key;
   final String? description;
   final LookupOption workspace;
   final LookupOption workType;
   final LookupOption reporter;
+  final WorkItemBucket bucket;
+  final WorkItemStatus status;
   final LookupOption? assignee;
   final LookupOption? parent;
   final LookupOption? team;
   final DateTime? dueDate;
   final DateTime? startDate;
+  final DateTime? createdAt;
+  final DateTime? lastViewedAt;
   final List<LookupOption> labels;
   final List<AttachmentCreateRequest> attachments;
 
@@ -151,15 +183,20 @@ class WorkItemResponse {
     return {
       'id': id,
       'summary': summary,
+      'key': key,
       'description': description,
       'workspace': workspace.toMap(),
       'workType': workType.toMap(),
       'reporter': reporter.toMap(),
+      'bucket': bucket.name,
+      'status': status.name,
       'assignee': assignee?.toMap(),
       'parent': parent?.toMap(),
       'team': team?.toMap(),
       'dueDate': dueDate,
       'startDate': startDate,
+      'createdAt': createdAt,
+      'lastViewedAt': lastViewedAt,
       'labels': labels.map((item) => item.toMap()).toList(),
       'attachments': attachments.map((item) => item.toMap()).toList(),
     };
@@ -206,5 +243,19 @@ AttachmentKind _attachmentKindFromString(String? value) {
   return AttachmentKind.values.firstWhere(
     (kind) => kind.name == value,
     orElse: () => AttachmentKind.document,
+  );
+}
+
+WorkItemBucket _workItemBucketFromString(String? value) {
+  return WorkItemBucket.values.firstWhere(
+    (bucket) => bucket.name == value,
+    orElse: () => WorkItemBucket.backlog,
+  );
+}
+
+WorkItemStatus _workItemStatusFromString(String? value) {
+  return WorkItemStatus.values.firstWhere(
+    (status) => status.name == value,
+    orElse: () => WorkItemStatus.todo,
   );
 }

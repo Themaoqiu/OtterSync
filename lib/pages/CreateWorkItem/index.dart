@@ -7,6 +7,7 @@ import 'package:ottersync/components/CreateWorkItem/CreateWorkItemSectionCard.da
 import 'package:ottersync/components/CreateWorkItem/CreateWorkItemTopBar.dart';
 import 'package:ottersync/components/CreateWorkItem/TypeSelectorBar.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
+import 'package:ottersync/components/Common/EmptyStateView.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/work_item_api.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
@@ -75,156 +76,169 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
     return Scaffold(
       backgroundColor: palette.scaffold,
       body: SafeArea(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _loadError != null
-            ? CreateWorkItemLoadError(
-                message: _loadError ?? '请检查 Firebase 配置和网络连接。',
-                onRetry: _loadInitialData,
-              )
-            : ListView(
-                padding: AppSpace.pagePaddingWithNav,
-                children: [
-                  CreateWorkItemTopBar(
-                    saving: _saving,
-                    onClose: () => context.pop(),
-                    onSubmit: _submit,
-                  ),
-                  const SizedBox(height: AppSpace.sectionGap),
-                  TypeSelectorBar(
-                    workspace: _selectedWorkspace,
-                    workType: _selectedWorkType,
-                    workspaces: _workspaces,
-                    workTypes: _workTypes,
-                    onWorkspaceChanged: (value) => setState(() {
-                      _selectedWorkspace = value;
-                      _selectedParent = null;
-                    }),
-                    onWorkTypeChanged: (value) => setState(() {
-                      _selectedWorkType = value;
-                    }),
-                    onWorkspaceLoadParentItems: _loadParentItems,
-                  ),
-                  const SizedBox(height: AppSpace.sectionGap),
-                  TextField(
-                    controller: _summaryController,
-                    maxLength: 200,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    decoration: const InputDecoration(
-                      counterText: '',
-                      hintText: '添加摘要...',
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      filled: false,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpace.sectionGap),
-                  CreateWorkItemSectionCard(
-                    title: '描述',
-                    child: TextField(
-                      controller: _descriptionController,
-                      minLines: 4,
-                      maxLines: 8,
-                      decoration: const InputDecoration(
-                        hintText: '添加描述……',
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpace.sectionGap),
-                  CreateWorkItemAttachmentsSection(
-                    attachments: _attachments,
-                    saving: _saving,
-                    onAddPhoto: () =>
-                        _addAttachment(initialKind: AttachmentKind.photo),
-                    onAddVideo: () =>
-                        _addAttachment(initialKind: AttachmentKind.video),
-                    onAddDocument: () =>
-                        _addAttachment(initialKind: AttachmentKind.document),
-                    onAddScreen: () =>
-                        _addAttachment(initialKind: AttachmentKind.video),
-                    onDeleteAttachment: (index) {
-                      setState(() => _attachments.removeAt(index));
-                    },
-                  ),
-                  const SizedBox(height: AppSpace.sectionGap),
-                  CreateWorkItemMoreFieldsSection(
-                    expanded: _moreExpanded,
-                    onToggle: () =>
-                        setState(() => _moreExpanded = !_moreExpanded),
-                    reporter: _selectedReporter,
-                    assignee: _selectedAssignee,
-                    team: _selectedTeam,
-                    parent: _selectedParent,
-                    startDate: _startDate,
-                    dueDate: _dueDate,
-                    selectedLabelCount: _selectedLabelIds.length,
-                    selectedLabelNames: _selectedLabelNames,
-                    newLabelsController: _newLabelsController,
-                    onPickReporter: () async {
-                      final result = await _pickLookup(
-                        title: '选择经办人',
-                        options: _users,
-                        selected: _selectedReporter,
-                      );
-                      if (result != null) {
-                        setState(() => _selectedReporter = result);
-                      }
-                    },
-                    onPickAssignee: () async {
-                      final result = await _pickLookup(
-                        title: '选择处理人',
-                        options: _users,
-                        selected: _selectedAssignee,
-                        allowClear: true,
-                      );
-                      if (result != _selectedAssignee) {
-                        setState(() => _selectedAssignee = result);
-                      }
-                    },
-                    onPickLabels: _toggleLabelSheet,
-                    onPickParent: () async {
-                      final result = await _pickLookup(
-                        title: '选择父项',
-                        options: _parentItems,
-                        selected: _selectedParent,
-                        allowClear: true,
-                        emptyLabel: '当前空间暂无父项可选',
-                      );
-                      if (result != _selectedParent) {
-                        setState(() => _selectedParent = result);
-                      }
-                    },
-                    onPickTeam: () async {
-                      final result = await _pickLookup(
-                        title: '选择团队',
-                        options: _teams,
-                        selected: _selectedTeam,
-                        allowClear: true,
-                      );
-                      if (result != _selectedTeam) {
-                        setState(() => _selectedTeam = result);
-                      }
-                    },
-                    onPickStartDate: () => _pickDate(
-                      initial: _startDate,
-                      onPicked: (value) => setState(() => _startDate = value),
-                    ),
-                    onPickDueDate: () => _pickDate(
-                      initial: _dueDate,
-                      onPicked: (value) => setState(() => _dueDate = value),
-                    ),
-                  ),
-                ],
+        bottom: false,
+        child: Column(
+          children: [
+            Padding(
+              padding: AppSpace.pagePadding,
+              child: CreateWorkItemTopBar(
+                saving: _saving,
+                onClose: () => context.pop(),
+                onSubmit: _submit,
               ),
+            ),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _loadError != null
+                  ? CreateWorkItemLoadError(
+                      message: _loadError ?? '请检查 Firebase 配置和网络连接。',
+                      onRetry: _loadInitialData,
+                    )
+                  : _workspaces.isEmpty
+                  ? const EmptyStateView(
+                      icon: Icons.public_outlined,
+                      title: '还没有空间',
+                      description: '请先创建一个真实数据库空间，再创建工作项。',
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
+                      children: [
+                        TypeSelectorBar(
+                          workspace: _selectedWorkspace,
+                          workType: _selectedWorkType,
+                          workspaces: _workspaces,
+                          workTypes: _workTypes,
+                          onWorkspaceChanged: (value) => setState(() {
+                            _selectedWorkspace = value;
+                            _selectedParent = null;
+                          }),
+                          onWorkTypeChanged: (value) => setState(() {
+                            _selectedWorkType = value;
+                          }),
+                          onWorkspaceLoadParentItems: _loadParentItems,
+                        ),
+                        const SizedBox(height: AppSpace.sectionGap),
+                        TextField(
+                          controller: _summaryController,
+                          maxLength: 200,
+                          style: theme.textTheme.headlineMedium,
+                          decoration: const InputDecoration(
+                            counterText: '',
+                            hintText: '添加摘要...',
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpace.sectionGap),
+                        CreateWorkItemSectionCard(
+                          title: '描述',
+                          child: TextField(
+                            controller: _descriptionController,
+                            minLines: 4,
+                            maxLines: 8,
+                            decoration: const InputDecoration(
+                              hintText: '添加描述……',
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: false,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpace.sectionGap),
+                        CreateWorkItemAttachmentsSection(
+                          attachments: _attachments,
+                          saving: _saving,
+                          onAddPhoto: () =>
+                              _addAttachment(initialKind: AttachmentKind.photo),
+                          onAddVideo: () =>
+                              _addAttachment(initialKind: AttachmentKind.video),
+                          onAddDocument: () =>
+                              _addAttachment(initialKind: AttachmentKind.document),
+                          onAddScreen: () =>
+                              _addAttachment(initialKind: AttachmentKind.video),
+                          onDeleteAttachment: (index) {
+                            setState(() => _attachments.removeAt(index));
+                          },
+                        ),
+                        const SizedBox(height: AppSpace.sectionGap),
+                        CreateWorkItemMoreFieldsSection(
+                          expanded: _moreExpanded,
+                          onToggle: () =>
+                              setState(() => _moreExpanded = !_moreExpanded),
+                          reporter: _selectedReporter,
+                          assignee: _selectedAssignee,
+                          team: _selectedTeam,
+                          parent: _selectedParent,
+                          startDate: _startDate,
+                          dueDate: _dueDate,
+                          selectedLabelCount: _selectedLabelIds.length,
+                          selectedLabelNames: _selectedLabelNames,
+                          newLabelsController: _newLabelsController,
+                          onPickReporter: () async {
+                            final result = await _pickLookup(
+                              title: '选择经办人',
+                              options: _users,
+                              selected: _selectedReporter,
+                            );
+                            if (result != null) {
+                              setState(() => _selectedReporter = result);
+                            }
+                          },
+                          onPickAssignee: () async {
+                            final result = await _pickLookup(
+                              title: '选择处理人',
+                              options: _users,
+                              selected: _selectedAssignee,
+                              allowClear: true,
+                            );
+                            if (result != _selectedAssignee) {
+                              setState(() => _selectedAssignee = result);
+                            }
+                          },
+                          onPickLabels: _toggleLabelSheet,
+                          onPickParent: () async {
+                            final result = await _pickLookup(
+                              title: '选择父项',
+                              options: _parentItems,
+                              selected: _selectedParent,
+                              allowClear: true,
+                              emptyLabel: '当前空间暂无父项可选',
+                            );
+                            if (result != _selectedParent) {
+                              setState(() => _selectedParent = result);
+                            }
+                          },
+                          onPickTeam: () async {
+                            final result = await _pickLookup(
+                              title: '选择团队',
+                              options: _teams,
+                              selected: _selectedTeam,
+                              allowClear: true,
+                            );
+                            if (result != _selectedTeam) {
+                              setState(() => _selectedTeam = result);
+                            }
+                          },
+                          onPickStartDate: () => _pickDate(
+                            initial: _startDate,
+                            onPicked: (value) => setState(() => _startDate = value),
+                          ),
+                          onPickDueDate: () => _pickDate(
+                            initial: _dueDate,
+                            onPicked: (value) => setState(() => _dueDate = value),
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

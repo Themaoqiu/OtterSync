@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
 import 'package:ottersync/components/Common/CustomFilterChip.dart';
+import 'package:ottersync/components/Common/IssueListTile.dart';
 import 'package:ottersync/theme/design_tokens.dart';
+import 'package:ottersync/viewmodels/jira_models.dart';
 
 class CalendarTabView extends StatefulWidget {
-  const CalendarTabView({super.key, required this.filters});
+  const CalendarTabView({
+    super.key,
+    required this.filters,
+    required this.items,
+  });
 
   final List<String> filters;
+  final List<IssueSummary> items;
 
   @override
   State<CalendarTabView> createState() => _CalendarTabViewState();
@@ -14,7 +21,7 @@ class CalendarTabView extends StatefulWidget {
 
 class _CalendarTabViewState extends State<CalendarTabView> {
   int _selectedFilter = 0;
-  String _selectedDay = '14';
+  int _selectedDay = 14;
 
   static const _days = [
     ['29', '30', '31', '1', '2', '3', '4'],
@@ -52,20 +59,70 @@ class _CalendarTabViewState extends State<CalendarTabView> {
           child: _CalendarCard(selectedDay: _selectedDay, onDayTap: _onDayTap),
         ),
         const SizedBox(height: 18),
-        AppSurface(child: _CalendarEmptyState(selectedDay: _selectedDay)),
+        if (_scheduledItems.isEmpty)
+          AppSurface(child: _CalendarEmptyState(selectedDay: _selectedDay))
+        else
+          AppSurface(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _scheduledItems
+                  .map(
+                    (item) => IssueListTile(
+                      title: item.title,
+                      subtitle: '${item.key} · ${item.subtitle ?? ''}',
+                      status: item.status,
+                      avatar: item.assigneeInitials,
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ),
+        const SizedBox(height: 18),
+        AppSurface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('未安排 (${_unscheduledItems.length})', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              if (_unscheduledItems.isEmpty)
+                Text('所有工作项都已安排到日历中。', style: Theme.of(context).textTheme.bodyMedium)
+              else
+                ..._unscheduledItems.map(
+                  (item) => IssueListTile(
+                    title: item.title,
+                    subtitle: '${item.key} · ${item.subtitle ?? ''}',
+                    status: item.status,
+                    avatar: item.assigneeInitials,
+                  ),
+                ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
+  List<IssueSummary> get _scheduledItems {
+    return widget.items.where((item) => item.dueDate?.day == _selectedDay).toList(growable: false);
+  }
+
+  List<IssueSummary> get _unscheduledItems {
+    return widget.items.where((item) => item.dueDate == null).toList(growable: false);
+  }
+
   void _onDayTap(String day) {
-    setState(() => _selectedDay = day);
+    final parsed = int.tryParse(day);
+    if (parsed == null) {
+      return;
+    }
+    setState(() => _selectedDay = parsed);
   }
 }
 
 class _CalendarCard extends StatelessWidget {
   const _CalendarCard({required this.selectedDay, required this.onDayTap});
 
-  final String selectedDay;
+  final int selectedDay;
   final ValueChanged<String> onDayTap;
 
   @override
@@ -80,7 +137,12 @@ class _CalendarCard extends StatelessWidget {
             const SizedBox(width: 4),
             Icon(Icons.arrow_drop_down_rounded, color: palette.textSecondary),
             const Spacer(),
-            Text('今天', style: TextStyle(color: palette.primary, fontSize: 18)),
+            Text(
+              '今天',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: palette.primary,
+                  ),
+            ),
             const SizedBox(width: 22),
             Icon(
               Icons.chevron_left_rounded,
@@ -100,7 +162,7 @@ class _CalendarCard extends StatelessWidget {
               .map(
                 (day) => Expanded(
                   child: Center(
-                    child: Text(day, style: TextStyle(fontSize: 17)),
+                    child: Text(day),
                   ),
                 ),
               )
@@ -122,7 +184,7 @@ class _CalendarCard extends StatelessWidget {
                             width: 54,
                             height: 54,
                             decoration: BoxDecoration(
-                              color: day == selectedDay
+                              color: int.tryParse(day) == selectedDay
                                   ? palette.primary
                                   : Colors.transparent,
                               shape: BoxShape.circle,
@@ -131,10 +193,9 @@ class _CalendarCard extends StatelessWidget {
                             child: Text(
                               day,
                               style: TextStyle(
-                                color: day == selectedDay
+                                color: int.tryParse(day) == selectedDay
                                     ? Colors.white
                                     : palette.textPrimary,
-                                fontSize: 17,
                               ),
                             ),
                           ),
@@ -154,7 +215,7 @@ class _CalendarCard extends StatelessWidget {
 class _CalendarEmptyState extends StatelessWidget {
   const _CalendarEmptyState({required this.selectedDay});
 
-  final String selectedDay;
+  final int selectedDay;
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +236,7 @@ class _CalendarEmptyState extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        Text('尚未安排任何事项', style: Theme.of(context).textTheme.headlineMedium),
+        Text('尚未安排任何事项', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 14),
         Text(
           '$selectedDay 日无任何到期工作项',

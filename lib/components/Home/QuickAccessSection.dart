@@ -15,6 +15,7 @@ class QuickAccessSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppThemePalette.of(context);
     final wideItem = items.first;
     final compactItems = items.skip(1).toList();
 
@@ -24,27 +25,39 @@ class QuickAccessSection extends StatelessWidget {
           onTap: () => onItemTap(wideItem),
           child: AppSurface(
             margin: const EdgeInsets.only(bottom: 14),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
-                _FeatureIcon(icon: wideItem.icon, color: wideItem.color),
+                _FeatureIcon(
+                  icon: wideItem.icon,
+                  color: wideItem.color,
+                  iconTint: wideItem.iconTint,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         wideItem.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: palette.textPrimary,
+                          fontSize: 17,
+                          height: 1.1,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         wideItem.subtitle,
-                        style: const TextStyle(
-                          color: Color(0xFF8E4BC3),
-                          fontSize: 14,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: palette.textSecondary,
+                          fontSize: 13,
+                          height: 1.15,
                         ),
                       ),
                     ],
@@ -79,7 +92,7 @@ class QuickAccessSection extends StatelessWidget {
             crossAxisCount: 2,
             mainAxisSpacing: 14,
             crossAxisSpacing: 14,
-            childAspectRatio: 2.55,
+            mainAxisExtent: 68,
           ),
           itemCount: compactItems.length,
           itemBuilder: (context, index) {
@@ -90,11 +103,15 @@ class QuickAccessSection extends StatelessWidget {
               child: AppSurface(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 10,
+                  vertical: 12,
                 ),
                 child: Row(
                   children: [
-                    _FeatureIcon(icon: item.icon, color: item.color),
+                    _FeatureIcon(
+                      icon: item.icon,
+                      color: item.color,
+                      iconTint: item.iconTint,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -105,14 +122,22 @@ class QuickAccessSection extends StatelessWidget {
                             item.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: palette.textPrimary,
+                              fontSize: 17,
+                              height: 1.1,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             item.subtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: palette.textSecondary,
+                              fontSize: 13,
+                              height: 1.15,
+                            ),
                           ),
                         ],
                       ),
@@ -126,13 +151,19 @@ class QuickAccessSection extends StatelessWidget {
       ],
     );
   }
+
 }
 
 class _FeatureIcon extends StatelessWidget {
-  const _FeatureIcon({required this.icon, required this.color});
+  const _FeatureIcon({
+    required this.icon,
+    required this.color,
+    this.iconTint,
+  });
 
   final IconData icon;
   final Color color;
+  final Color? iconTint;
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +174,7 @@ class _FeatureIcon extends StatelessWidget {
         color: color,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(icon, size: 24, color: const Color(0xFF6B3FA0)),
+      child: Icon(icon, size: 24, color: iconTint ?? const Color(0xFF6B3FA0)),
     );
   }
 }

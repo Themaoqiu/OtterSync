@@ -27,15 +27,15 @@ class SpaceCard extends StatelessWidget {
               height: 48,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF563FD6), Color(0xFF7C69EA)],
+                gradient: LinearGradient(
+                  colors: space.avatar.gradient,
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
               ),
-              child: const Icon(
-                Icons.thunderstorm_rounded,
-                color: Colors.white,
+              child: Icon(
+                space.avatar.icon,
+                color: space.avatar.iconColor,
                 size: 26,
               ),
             ),

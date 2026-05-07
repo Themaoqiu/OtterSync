@@ -307,6 +307,12 @@ final GoRouter _rootRouter = GoRouter(
       builder: (context, state) => const SpaceDetailsView(),
     ),
     GoRoute(
+      path: '/space-details/:spaceId',
+      builder: (context, state) => SpaceDetailsView(
+        spaceId: int.tryParse(state.pathParameters['spaceId'] ?? ''),
+      ),
+    ),
+    GoRoute(
       path: '/create-work-item',
       builder: (context, state) => const CreateWorkItemPage(),
     ),

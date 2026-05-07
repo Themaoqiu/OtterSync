@@ -3,14 +3,26 @@ import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/AllWork/AllWorkToolbar.dart';
 import 'package:ottersync/components/AllWork/FilterSheet.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
+import 'package:ottersync/components/Common/EmptyStateView.dart';
 import 'package:ottersync/components/Common/IssueListTile.dart';
 import 'package:ottersync/components/Common/UserAvatar.dart';
 import 'package:ottersync/components/Common/demo_feedback.dart';
 import 'package:ottersync/theme/design_tokens.dart';
-import 'package:ottersync/viewmodels/jira_demo_data.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
 import 'package:ottersync/viewmodels/work_item_api.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
+
+const _filters = [
+  FilterItem(title: '我的未处理工作项', icon: Icons.account_circle_outlined),
+  FilterItem(title: '我报告的', icon: Icons.error_outline_rounded),
+  FilterItem(title: '最近查看', icon: Icons.remove_red_eye_outlined),
+  FilterItem(title: '所有工作项', icon: Icons.inventory_2_outlined),
+  FilterItem(title: '未处理工作项', icon: Icons.sync_problem_outlined),
+  FilterItem(title: '最近创建', icon: Icons.add_card_outlined),
+  FilterItem(title: '最近解决', icon: Icons.assignment_turned_in_outlined),
+  FilterItem(title: '最近更新', icon: Icons.sync_rounded),
+  FilterItem(title: '已完成的工作项', icon: Icons.check_circle_outline_rounded),
+];
 
 class AllWorkView extends StatefulWidget {
   const AllWorkView({super.key});
@@ -21,7 +33,7 @@ class AllWorkView extends StatefulWidget {
 
 class _AllWorkViewState extends State<AllWorkView> {
   final WorkItemApi _api = WorkItemApi();
-  FilterItem _selectedFilter = JiraDemoData.filters.first;
+  FilterItem _selectedFilter = _filters.first;
   AllWorkViewMode _viewMode = AllWorkViewMode.list;
   List<LookupOption> _workItems = const [];
   bool _loading = true;
@@ -104,10 +116,12 @@ class _AllWorkViewState extends State<AllWorkView> {
             ),
           )
         else if (_workItems.isEmpty)
-          AppSurface(
-            child: Text(
-              '还没有工作项，点击右上角 + 创建。',
-              style: theme.textTheme.bodyMedium,
+          const SizedBox(
+            height: 420,
+            child: EmptyStateView(
+              icon: Icons.inbox_outlined,
+              title: '还没有工作项',
+              description: '点击右上角 + 创建第一条真实数据库工作项。',
             ),
           )
         else
@@ -193,7 +207,7 @@ class _AllWorkViewState extends State<AllWorkView> {
       isScrollControlled: true,
       builder: (context) => FilterSheet(
         recentFilter: _selectedFilter,
-        filters: JiraDemoData.filters,
+        filters: _filters,
         onCreate: () => showDemoFeedback(context, '创建筛选器接口已预留。'),
       ),
     );

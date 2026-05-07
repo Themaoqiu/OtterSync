@@ -36,25 +36,21 @@ flutter test
 
 ### 1.3 Firebase 配置
 
-项目当前依赖 Firebase 作为工作项存储层，运行前需要补齐平台配置文件：
+项目以 Firebase / Cloud Firestore 作为工作项存储层。仓库已包含各平台的配置文件，clone 后即可直接运行：
 
-- Android：`android/app/google-services.json`
-- iOS / macOS：`ios/Runner/GoogleService-Info.plist`、`macos/Runner/GoogleService-Info.plist`
+- `lib/firebase_options.dart`
+- `android/app/google-services.json`
+- `ios/Runner/GoogleService-Info.plist`
+- `macos/Runner/GoogleService-Info.plist`
 
-安装依赖：
+客户端使用 `firebase_core` + `cloud_firestore`，首次启动会在 Firestore 中自动写入一批默认工作区、用户、标签和示例工作项，便于直接演示。
 
-```bash
-flutter pub get
-```
-
-如果你还没有 Firebase 项目，建议先用 FlutterFire CLI 生成配置：
+如需接入自己的 Firebase 项目，可用 FlutterFire CLI 重新生成配置覆盖：
 
 ```bash
 dart pub global activate flutterfire_cli
 flutterfire configure
 ```
-
-客户端当前使用 `firebase_core` + `cloud_firestore`，首次启动会在 Firestore 中自动写入一批默认工作区、用户、标签和示例工作项，便于直接演示。
 
 ## 2. 代码结构
 
