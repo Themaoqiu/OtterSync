@@ -161,35 +161,42 @@ String generateWorkspaceKey(String name) {
     return '';
   }
 
-  final asciiLetters = trimmed.replaceAll(RegExp(r'[^A-Za-z]'), '').toUpperCase();
-  if (asciiLetters.isNotEmpty) {
-    if (asciiLetters.length >= 4) {
-      return asciiLetters.substring(0, 4);
+  final asciiLetters = trimmed.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toUpperCase();
+  if (asciiLetters.length >= 4) {
+    return asciiLetters.substring(0, 4);
+  }
+
+  final buffer = StringBuffer(asciiLetters);
+  for (final char in trimmed.characters) {
+    if (buffer.length >= 4) {
+      break;
     }
-    return asciiLetters.padRight(4, asciiLetters[asciiLetters.length - 1]);
+    if (char.trim().isEmpty) {
+      continue;
+    }
+
+    if (_isAsciiAlphaNumeric(char)) {
+      buffer.write(char.toUpperCase());
+      continue;
+    }
+
+    buffer.write(_stableAlphaNumericToken(char));
   }
 
-  final initials = trimmed.characters
-      .map((char) => _cjkInitials[char] ?? 'X')
-      .join();
-  if (initials.length >= 4) {
-    return initials.substring(0, 4);
-  }
-  if (initials.isEmpty) {
-    return 'XXXX';
+  final generated = buffer.toString();
+  if (generated.isEmpty) {
+    return '';
   }
 
-  final buffer = StringBuffer(initials);
-  var index = 0;
-  while (buffer.length < 4) {
-    buffer.write(initials[index % initials.length]);
-    index += 1;
+  final completed = StringBuffer(generated);
+  while (completed.length < 4) {
+    completed.write(generated[completed.length % generated.length]);
   }
-  return buffer.toString().substring(0, 4);
+  return completed.toString().substring(0, 4);
 }
 
 SpaceAvatarSpec buildSpaceAvatar(String seed) {
-  final normalized = seed.trim().isEmpty ? 'OTTERSYNC' : seed.trim().toUpperCase();
+  final normalized = seed.trim().isEmpty ? '0' : seed.trim().toUpperCase();
   final paletteIndex = normalized.runes.fold<int>(0, (value, rune) => value + rune);
   final iconIndex = normalized.runes.fold<int>(0, (value, rune) => value ^ rune);
 
@@ -228,17 +235,12 @@ String workItemStatusLabel(WorkItemStatus status) {
   }
 }
 
-const Map<String, String> _cjkInitials = {
-  '毛': 'M',
-  '球': 'Q',
-  '智': 'Z',
-  '能': 'N',
-  '终': 'Z',
-  '端': 'D',
-  '开': 'K',
-  '发': 'F',
-  '课': 'K',
-  '程': 'C',
-  '设': 'S',
-  '计': 'J',
-};
+bool _isAsciiAlphaNumeric(String value) {
+  return RegExp(r'^[A-Za-z0-9]$').hasMatch(value);
+}
+
+String _stableAlphaNumericToken(String value) {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  final hash = value.runes.fold<int>(0, (current, rune) => current * 37 + rune);
+  return alphabet[hash % alphabet.length];
+}
