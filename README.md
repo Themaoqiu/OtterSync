@@ -1,97 +1,99 @@
-# OtterSync
+# 🦦 OtterSync
 
-OtterSync 是一个基于 Flutter 的项目协作原型应用，围绕**任务流转、团队协作治理、AI 执行闭环和数据分析看板**构建。
+OtterSync 是一个现代化的团队协作与项目管理平台，主要功能复刻自 Jira Mobile。当前客户端使用 Flutter，工作项数据接入改为 Firebase / Cloud Firestore。
 
-## 项目定位
+## 1. 快速开始
 
-当前版本面向“复杂流程可演示”的原型验证，重点覆盖：
+### 1.1 Skills
 
-- **完成度分层**：产品完整性 / 业务完整性 / 工程完整性
-- **统一状态模型**：项目、任务、成员、动态、审计、AI 建议统一管理
-- **业务闭环**：任务创建、状态流转、风险标记、历史追踪
-- **协作治理**：权限矩阵、项目策略、操作审计、动态事件流
-- **AI 闭环**：建议生成 → 人工确认 → 执行回写
-- **多维分析**：交付趋势、流程状态、风险分布、成员负载
+仓库内置前后端开发约束，位于 `skills/`：
 
-## 核心功能模块
+- `skills/ottersync-flutter-style/SKILL.md`：Flutter 代码风格、目录组织和 UI 约定
+- `skills/ottersync-python-backend/SKILL.md`：仓库内历史 Python 后端代码的开发约定
 
-应用采用底部 5 Tab 导航：
+### 1.2 前端开发
 
-1. **项目**：任务筛选、快速新增、项目进度与完成度分层展示  
-2. **工作区**：成员状态、角色权限矩阵、项目授权策略、审计与动态  
-3. **AI**：对话交互、Prompt 模板、执行建议确认与回写  
-4. **分析**：指标总览、趋势图、状态分布、风险与负载分析  
-5. **我的**：个人任务/工时/风险与工程基线信息聚合
+前端代码位于 `lib/`，使用 Flutter 框架开发，注意每次开发时都先拉取新代码。
 
-## 技术栈
+每次启动都先更新依赖：
 
-- Flutter
-- Dart（`sdk: ^3.11.1`）
-- Material 3
-- `ChangeNotifier` + `InheritedNotifier`（`AppState` / `AppStateScope`）
+```bash
+flutter pub get
+```
 
-## 代码风格约定
+运行应用：
 
-- Flutter 代码风格、目录拆分、入口组织和路由约定以 [skills/ottersync-flutter-style/SKILL.md](/skills/ottersync-flutter-style/SKILL.md) 为准。
-- 结构性调整前应同时参考 [skills/ottersync-flutter-style/references/clean_style.md](/skills/ottersync-flutter-style/references/clean_style.md)。
-- 默认遵循浅层目录拆分：`pages/` 放页面，`components/` 放可复用或页面级 UI 区块，`routes/` 放应用入口与路由，`viewmodels/` 仅在需要轻量结构化数据时引入。
-- `main.dart` 仅负责 `runApp(getRootWidget())`，根组件装配保持在 `lib/routes/index.dart`。
-- 页面目录沿用 `lib/pages/<Feature>/index.dart`，组件按功能归档到 `lib/components/<Feature>/`，优先使用 `package:` 导入。
+```bash
+flutter run
+```
 
-## 目录结构
+检查与测试：
+
+```bash
+flutter analyze
+flutter test
+```
+
+### 1.3 Firebase 配置
+
+项目以 Firebase / Cloud Firestore 作为工作项存储层。仓库已包含各平台的配置文件，clone 后即可直接运行：
+
+- `lib/firebase_options.dart`
+- `android/app/google-services.json`
+- `ios/Runner/GoogleService-Info.plist`
+- `macos/Runner/GoogleService-Info.plist`
+
+客户端使用 `firebase_core` + `cloud_firestore`，首次启动会在 Firestore 中自动写入一批默认工作区、用户、标签和示例工作项，便于直接演示。
+
+如需接入自己的 Firebase 项目，可用 FlutterFire CLI 重新生成配置覆盖：
+
+```bash
+dart pub global activate flutterfire_cli
+flutterfire configure
+```
+
+## 2. 代码结构
+
+### 2.1 前端结构
 
 ```text
 lib/
-├── main.dart              # 应用入口
-├── components/            # 可复用或页面级 UI 区块
-├── routes/                # 根组件与主题配置
-├── state/                 # 全局状态与业务模型
+├── main.dart
+├── components/
+│   ├── Account/
+│   ├── AllWork/
+│   ├── Common/
+│   ├── Dashboard/
+│   ├── Home/
+│   ├── SpaceDetails/
+│   └── Spaces/
 ├── pages/
-│   ├── Main/              # 5 Tab 主框架
-│   ├── Home/              # 项目页
-│   ├── Workspace/         # 工作区页
-│   ├── AI/                # AI 页
-│   ├── Dashboard/         # 分析页
-│   └── My/                # 我的页
-└── theme/                 # 设计令牌
-skills/
-└── ottersync-flutter-style/
-    ├── SKILL.md           # 当前仓库 Flutter 风格基准
-    └── references/        # 对齐 test_project 的补充说明
-test/
-└── app_state_test.dart    # 关键状态流转测试
+│   ├── Account/
+│   ├── AllWork/
+│   ├── Dashboard/
+│   ├── Home/
+│   ├── Main/
+│   ├── Notifications/
+│   ├── SpaceDetails/
+│   └── Spaces/
+├── routes/
+│   └── index.dart
+├── state/
+│   └── theme_controller.dart
+├── theme/
+│   └── design_tokens.dart
+└── viewmodels/
+    ├── jira_demo_data.dart
+    └── jira_models.dart
 ```
 
-## 快速开始
 
-1. 安装 Flutter SDK（需满足 `pubspec.yaml` 中 Dart 版本约束）
-2. 获取依赖：
+## 3. 开发约束
 
-   ```bash
-   flutter pub get
-   ```
+### 3.1 前端
 
-3. 运行应用：
+- 页面放在 `lib/pages/<Feature>/index.dart`
+- 可复用 UI 放在 `lib/components/<Feature>/`
+- 入口和路由集中在 `lib/routes/index.dart`
+- 优先使用 `package:` 导入
 
-   ```bash
-   flutter run
-   ```
-
-## 开发与测试
-
-- 静态检查：
-
-  ```bash
-  flutter analyze
-  ```
-
-- 运行测试：
-
-  ```bash
-  flutter test
-  ```
-
-## 说明
-
-- 当前仓库为原型工程，数据以内存状态为主（`AppState`）。
-- 可在此基础上继续扩展后端 API、持久化和权限系统。

@@ -1,225 +1,368 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ottersync/components/Common/EmptyStateView.dart';
 import 'package:ottersync/components/Common/SectionHeader.dart';
 import 'package:ottersync/components/Common/UserAvatar.dart';
 import 'package:ottersync/components/Common/demo_feedback.dart';
+import 'package:ottersync/components/Home/HomeActivitySwitcher.dart';
+import 'package:ottersync/components/Home/HomeAiCreateCard.dart';
 import 'package:ottersync/components/Home/HomeOverviewCard.dart';
 import 'package:ottersync/components/Home/QuickAccessSection.dart';
 import 'package:ottersync/components/Home/RecentProjectsCard.dart';
 import 'package:ottersync/theme/design_tokens.dart';
-import 'package:ottersync/viewmodels/jira_demo_data.dart';
+import 'package:ottersync/viewmodels/jira_models.dart';
+import 'package:ottersync/viewmodels/work_item_api.dart';
 
 class HomeView extends StatefulWidget {
-  const HomeView({super.key});
+  const HomeView({super.key, WorkItemApi? api}) : _api = api;
+
+  final WorkItemApi? _api;
 
   @override
   State<HomeView> createState() => _HomeViewState();
 }
 
 class _HomeViewState extends State<HomeView> {
+  late final WorkItemApi _api;
   bool _overviewExpanded = true;
   bool _quickAccessExpanded = true;
-  bool _recentProjectsExpanded = true;
+  bool _loading = true;
+  String? _error;
+  HomeActivityMode _activityMode = HomeActivityMode.viewed;
+  List<QuickAccessItem> _quickAccessItems = const [];
+  List<IssueSummary> _viewedItems = const [];
+  List<IssueSummary> _dynamicItems = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _api = widget._api ?? WorkItemApi();
+    _loadHomeData();
+  }
 
   @override
   Widget build(BuildContext context) {
     final palette = AppThemePalette.of(context);
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
-    return ListView(
-      padding: AppSpace.pagePaddingWithNav,
-      children: [
-        Row(
+    return Scaffold(
+      backgroundColor: palette.scaffold,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
           children: [
-            InkWell(
-              onTap: () => context.push('/account'),
-              borderRadius: BorderRadius.circular(999),
-              child: const UserAvatar(label: 'MT'),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('早上好!', style: theme.textTheme.bodyMedium),
-                  Text('Themaoqiu', style: theme.textTheme.headlineMedium),
-                ],
-              ),
-            ),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: palette.primary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: palette.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: () => context.push('/account'),
+                        borderRadius: BorderRadius.circular(999),
+                        child: const UserAvatar(label: 'MT'),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: const SizedBox.shrink(),
+                      ),
+                      IconButton(
+                        onPressed: () => context.push('/create-work-item'),
+                        icon: Icon(
+                          Icons.add_rounded,
+                          color: palette.primary,
+                          size: 30,
+                        ),
+                        tooltip: '创建工作项目',
+                      ),
+                    ],
                   ),
                 ],
               ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => showDemoFeedback(context, '创建工作项接口已预留。'),
-                icon: const Icon(
-                  Icons.add_rounded,
-                  color: Colors.white,
-                  size: 26,
-                ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
+                children: [
+                  SectionHeader(
+                    title: '今日概述',
+                    expanded: _overviewExpanded,
+                    onToggle: () => setState(() {
+                      _overviewExpanded = !_overviewExpanded;
+                    }),
+                  ),
+                  _HomeSectionBody(
+                    expanded: _overviewExpanded,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 12),
+                        HomeOverviewCard(
+                          title: _dynamicItems.isEmpty
+                              ? 'No recent work activities found in the last 4 days.'
+                              : '${_dynamicItems.length} recent work activities found in the last 4 days.',
+                          description: _dynamicItems.isEmpty
+                              ? '使用人工智能。验证结果。'
+                              : '使用人工智能。验证结果。',
+                          onCopy: () => showDemoFeedback(context, '摘要内容复制接口已预留。'),
+                          onLike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
+                          onDislike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
+                          onMore: () => setState(() {
+                            _overviewExpanded = !_overviewExpanded;
+                          }),
+                        ),
+                        const SizedBox(height: 18),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SectionHeader(
+                    title: '快速访问',
+                    action: InkWell(
+                      onTap: () {},
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: Text(
+                          '编辑',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: palette.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    expanded: _quickAccessExpanded,
+                    onToggle: () => setState(() {
+                      _quickAccessExpanded = !_quickAccessExpanded;
+                    }),
+                  ),
+                  _HomeSectionBody(
+                    expanded: _quickAccessExpanded,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
+                        if (_loading)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        else if (_error != null)
+                          _buildErrorState()
+                        else if (_quickAccessItems.isEmpty)
+                          const SizedBox(
+                            height: 380,
+                            child: EmptyStateView(
+                              icon: Icons.bolt_outlined,
+                              title: '还没有快速访问内容',
+                              description: '创建真实空间或任务后，这里会自动生成快捷入口。',
+                            ),
+                          )
+                        else
+                          Column(
+                            children: [
+                              HomeAiCreateCard(
+                                onTap: () => showDemoFeedback(context, 'AI 创建工作项入口已恢复，上传图像流程待接入。'),
+                              ),
+                              const SizedBox(height: 14),
+                              QuickAccessSection(
+                                items: _buildQuickAccessItems(),
+                                onItemTap: (item) {
+                                  if (item.route != null) {
+                                    context.push(item.route!);
+                                    return;
+                                  }
+                                  showDemoFeedback(context, '${item.title} 交互入口已预留。');
+                                },
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  HomeActivitySwitcher(
+                    mode: _activityMode,
+                    onModeChanged: (mode) => setState(() => _activityMode = mode),
+                  ),
+                  if (_activityMode == HomeActivityMode.viewed) ...[
+                    const SizedBox(height: 18),
+                    Text(
+                      '今天',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (_loading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 32),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (_error != null)
+                      _buildErrorState()
+                    else if (_viewedItems.isEmpty)
+                      const SizedBox(
+                        height: 220,
+                        child: EmptyStateView(
+                          icon: Icons.history_outlined,
+                          title: '还没有已查看工作项',
+                          description: '查看真实工作项后，这里会显示最近查看记录。',
+                        ),
+                      )
+                    else
+                      RecentProjectsCard(
+                        items: _buildViewedDisplayItems().take(2).toList(growable: false),
+                        onItemTap: (item) =>
+                            showDemoFeedback(context, '将打开 ${item.key} 的详情页。'),
+                      ),
+                    const SizedBox(height: 18),
+                    Text(
+                      '四月',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (_viewedItems.length > 2)
+                      RecentProjectsCard(
+                        items: _buildViewedDisplayItems().skip(2).take(4).toList(growable: false),
+                        onItemTap: (item) =>
+                            showDemoFeedback(context, '将打开 ${item.key} 的详情页。'),
+                      ),
+                  ] else ...[
+                    const SizedBox(height: 18),
+                    if (_loading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 32),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (_error != null)
+                      _buildErrorState()
+                    else if (_dynamicItems.isEmpty)
+                      const SizedBox(
+                        height: 220,
+                        child: EmptyStateView(
+                          icon: Icons.bolt_outlined,
+                          title: '最近两三天还没有新动态',
+                          description: '当最近创建了新的真实工作项后，这里会显示工作动态。',
+                        ),
+                      )
+                    else
+                      RecentProjectsCard(
+                        items: _dynamicItems,
+                        onItemTap: (item) =>
+                            showDemoFeedback(context, '将打开 ${item.key} 的详情页。'),
+                      ),
+                  ],
+                ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 24),
-        Container(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: palette.shadow.withValues(alpha: isDark ? 0.0 : 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: TextField(
-            decoration: InputDecoration(
-              prefixIcon: Icon(
-                Icons.search_rounded,
-                color: palette.textSecondary,
-                size: 24,
-              ),
-              hintText: '搜索工作区、事务名称...',
-              fillColor: palette.surface,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpace.radiusXLarge),
-                borderSide: BorderSide(
-                  color: isDark ? palette.border : Colors.transparent,
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpace.radiusXLarge),
-                borderSide: BorderSide(
-                  color: isDark ? palette.border : Colors.transparent,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpace.radiusXLarge),
-                borderSide: BorderSide(color: palette.primary, width: 2),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-        SectionHeader(
-          title: '今日概述',
-          action: Icon(
-            Icons.more_horiz_rounded,
-            color: palette.textSecondary,
-            size: 28,
-          ),
-          expanded: _overviewExpanded,
-          onToggle: () => setState(() {
-            _overviewExpanded = !_overviewExpanded;
-          }),
-        ),
-        _HomeSectionBody(
-          expanded: _overviewExpanded,
-          child: Column(
-            children: [
-              const SizedBox(height: 12),
-              HomeOverviewCard(
-                onCopy: () => showDemoFeedback(context, '摘要内容复制接口已预留。'),
-                onLike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
-                onDislike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
-                onMore: () => showDemoFeedback(context, '更多动态接口已预留。'),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        SectionHeader(
-          title: '快速访问',
-          action: InkWell(
-            onTap: () {},
-            borderRadius: BorderRadius.circular(4),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: Text(
-                '编辑',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: palette.primary,
-                ),
-              ),
-            ),
-          ),
-          expanded: _quickAccessExpanded,
-          onToggle: () => setState(() {
-            _quickAccessExpanded = !_quickAccessExpanded;
-          }),
-        ),
-        _HomeSectionBody(
-          expanded: _quickAccessExpanded,
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-              QuickAccessSection(
-                items: JiraDemoData.homeQuickAccess,
-                onItemTap: (item) {
-                  if (item.route != null) {
-                    context.push(item.route!);
-                    return;
-                  }
-                  showDemoFeedback(context, '${item.title} 交互入口已预留。');
-                },
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        SectionHeader(
-          title: '最近项目',
-          action: Icon(
-            Icons.more_horiz_rounded,
-            color: palette.textSecondary,
-            size: 24,
-          ),
-          expanded: _recentProjectsExpanded,
-          onToggle: () => setState(() {
-            _recentProjectsExpanded = !_recentProjectsExpanded;
-          }),
-        ),
-        _HomeSectionBody(
-          expanded: _recentProjectsExpanded,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-              Text(
-                '今天',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: palette.textSecondary,
-                  letterSpacing: 0.2,
-                ),
-              ),
-              const SizedBox(height: 8),
-              RecentProjectsCard(
-                items: JiraDemoData.recentProjects,
-                onItemTap: (item) =>
-                    showDemoFeedback(context, '将打开 ${item.key} 的详情页。'),
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
+  }
+
+  Widget _buildErrorState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Text(
+        _error ?? '',
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Future<void> _loadHomeData() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final quickAccess = await _api.loadHomeQuickAccess();
+      final viewedItems = await _api.loadViewedItems();
+      final dynamicItems = await _api.loadRecentDynamicItems();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _quickAccessItems = quickAccess;
+        _viewedItems = viewedItems;
+        _dynamicItems = dynamicItems;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = '$error';
+        _loading = false;
+      });
+    }
+  }
+
+  List<QuickAccessItem> _buildQuickAccessItems() {
+    final items = <QuickAccessItem>[
+      ..._quickAccessItems,
+      const QuickAccessItem(
+        title: '我的工作',
+        subtitle: '筛选器',
+        icon: Icons.filter_alt_outlined,
+        color: Color(0xFFD8E7FF),
+        iconTint: Color(0xFF0C66E4),
+        route: '/all-work',
+      ),
+    ];
+
+    if (items.length <= 1) {
+      return items;
+    }
+
+    final wideItem = items.first;
+    final compactItems = items.skip(1).toList(growable: true);
+    compactItems.sort((left, right) {
+      if (left.title == '我的工作') {
+        return -1;
+      }
+      if (right.title == '我的工作') {
+        return 1;
+      }
+      return 0;
+    });
+    return [wideItem, ...compactItems];
+  }
+
+  List<IssueSummary> _buildViewedDisplayItems() {
+    final items = <IssueSummary>[
+      const IssueSummary(
+        title: '我的打开事务',
+        key: 'FILTER',
+        subtitle: '筛选器 · 已查看',
+        icon: Icons.filter_alt_outlined,
+        iconBackgroundColor: Color(0xFFD8E7FF),
+        iconColor: Color(0xFF0C66E4),
+      ),
+      ..._viewedItems.map(
+        (item) => IssueSummary(
+          title: item.title,
+          key: item.key,
+          subtitle: item.subtitle == null
+              ? '已查看'
+              : '${item.subtitle} · 已查看',
+          status: item.status,
+          assigneeInitials: item.assigneeInitials,
+          icon: item.icon,
+          iconBackgroundColor: item.iconBackgroundColor,
+          iconColor: item.iconColor,
+          statusKey: item.statusKey,
+          bucket: item.bucket,
+          workspaceId: item.workspaceId,
+          startDate: item.startDate,
+          dueDate: item.dueDate,
+        ),
+      ),
+    ];
+    return items;
   }
 }
 
@@ -232,8 +375,8 @@ class _HomeSectionBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 280),
-      reverseDuration: const Duration(milliseconds: 280),
+      duration: const Duration(milliseconds: 400),
+      reverseDuration: const Duration(milliseconds: 400),
       switchInCurve: Curves.easeInOutCubic,
       switchOutCurve: Curves.easeInOutCubic,
       transitionBuilder: (child, animation) {

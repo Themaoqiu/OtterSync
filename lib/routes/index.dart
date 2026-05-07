@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ottersync/pages/Account/index.dart';
 import 'package:ottersync/pages/AllWork/index.dart';
+import 'package:ottersync/pages/BootstrapError/index.dart';
+import 'package:ottersync/pages/CreateWorkItem/index.dart';
 import 'package:ottersync/pages/Dashboard/index.dart';
 import 'package:ottersync/pages/Home/index.dart';
 import 'package:ottersync/pages/Main/index.dart';
@@ -17,6 +19,11 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
     brightness: brightness,
     scaffoldBackgroundColor: palette.scaffold,
   );
+  final isDark = brightness == Brightness.dark;
+  final inputBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
+    borderSide: BorderSide(color: palette.border),
+  );
 
   return base.copyWith(
     colorScheme: ColorScheme(
@@ -29,7 +36,11 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
       onError: Colors.white,
       surface: palette.surface,
       onSurface: palette.textPrimary,
+      surfaceContainerHighest: palette.surfaceRaised,
+      outline: palette.border,
+      outlineVariant: palette.divider,
     ),
+    iconTheme: IconThemeData(color: palette.textSecondary),
     appBarTheme: AppBarTheme(
       backgroundColor: palette.scaffold,
       foregroundColor: palette.textPrimary,
@@ -42,7 +53,7 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
-        side: brightness == Brightness.dark
+        side: isDark
             ? BorderSide(color: palette.border)
             : BorderSide.none,
       ),
@@ -77,6 +88,14 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppSpace.radiusLarge),
         ),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: palette.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpace.radiusXLarge),
+        side: isDark ? BorderSide(color: palette.border) : BorderSide.none,
       ),
     ),
     textTheme: TextTheme(
@@ -130,20 +149,27 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: palette.surface,
+      fillColor: palette.surfaceRaised,
       hintStyle: TextStyle(color: palette.textSecondary, fontSize: 14),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppSpace.radius),
-        borderSide: BorderSide(color: palette.border),
+      labelStyle: TextStyle(color: palette.textSecondary),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: inputBorder,
+      enabledBorder: inputBorder,
+      focusedBorder: inputBorder.copyWith(
+        borderSide: BorderSide(color: palette.primary, width: 1.2),
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppSpace.radius),
-        borderSide: BorderSide(color: palette.border),
+      errorBorder: inputBorder.copyWith(
+        borderSide: BorderSide(color: palette.danger),
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppSpace.radius),
-        borderSide: BorderSide(color: palette.primary),
+      focusedErrorBorder: inputBorder.copyWith(
+        borderSide: BorderSide(color: palette.danger, width: 1.2),
+      ),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        foregroundColor: palette.textSecondary,
+        backgroundColor: palette.surface,
+        shape: const CircleBorder(),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -159,6 +185,65 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpace.radius),
         ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: palette.primary,
+        backgroundColor: palette.surface,
+        side: BorderSide(color: palette.border),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+    ),
+    chipTheme: base.chipTheme.copyWith(
+      backgroundColor: palette.surfaceRaised,
+      selectedColor: palette.primary.withValues(alpha: isDark ? 0.26 : 0.16),
+      side: BorderSide(color: palette.border),
+      labelStyle: TextStyle(color: palette.textSecondary),
+      secondaryLabelStyle: TextStyle(color: palette.primary),
+      checkmarkColor: palette.primary,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: palette.surface,
+      contentTextStyle: TextStyle(color: palette.textPrimary),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
+        side: isDark ? BorderSide(color: palette.border) : BorderSide.none,
+      ),
+    ),
+    listTileTheme: ListTileThemeData(
+      iconColor: palette.textSecondary,
+      textColor: palette.textPrimary,
+      tileColor: Colors.transparent,
+      contentPadding: EdgeInsets.zero,
+    ),
+    datePickerTheme: DatePickerThemeData(
+      backgroundColor: palette.surface,
+      surfaceTintColor: Colors.transparent,
+      headerForegroundColor: palette.textPrimary,
+      dayForegroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return Colors.white;
+        }
+        return palette.textPrimary;
+      }),
+      dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return palette.primary;
+        }
+        return Colors.transparent;
+      }),
+      todayForegroundColor: WidgetStatePropertyAll(palette.primary),
+      dividerColor: palette.divider,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpace.radiusXLarge),
       ),
     ),
   );
@@ -221,10 +306,29 @@ final GoRouter _rootRouter = GoRouter(
       path: '/space-details',
       builder: (context, state) => const SpaceDetailsView(),
     ),
+    GoRoute(
+      path: '/space-details/:spaceId',
+      builder: (context, state) => SpaceDetailsView(
+        spaceId: int.tryParse(state.pathParameters['spaceId'] ?? ''),
+      ),
+    ),
+    GoRoute(
+      path: '/create-work-item',
+      builder: (context, state) => const CreateWorkItemPage(),
+    ),
   ],
 );
 
-Widget getRootWidget() {
+Widget getRootWidget({Object? bootstrapError}) {
+  if (bootstrapError != null) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: _buildAppTheme(AppColors.light, Brightness.light),
+      darkTheme: _buildAppTheme(AppColors.dark, Brightness.dark),
+      home: FirebaseBootstrapErrorPage(error: bootstrapError),
+    );
+  }
+
   return ThemeControllerScope(
     notifier: _themeController,
     child: AnimatedBuilder(

@@ -7,8 +7,7 @@ description: Use when adding or modifying Flutter code in ottersync and the work
 
 Use this skill when working on `/Users/themaoqiu/CodeRepo/Android/ottersync` and the goal is to keep the code aligned with the style established by the sibling reference project at `/Users/themaoqiu/CodeRepo/Android/test/test_project/lib`.
 
-Read [references/test_project_style.md](references/test_project_style.md) before making structural changes, creating new pages, or introducing routing.
-Read [references/DESIGN.md](references/DESIGN.md) before creating or modifying any UI. This is mandatory for page visuals, component visuals, theme tokens, spacing, color, typography, buttons, cards, pills, navigation, and dark/light theme decisions.
+Read [references/clean_style.md](references/clean_style.md) before making structural changes, creating new pages, or introducing routing.
 
 ## First read
 
@@ -55,6 +54,9 @@ Default preferences:
 - Use Chinese copy if the surrounding UI already uses Chinese labels
 - Prefer UI-oriented component names such as `Header`, `Section`, `Card`, `Panel`, `Tile`, `Item`, `Bar`, `Banner`
 - Avoid underscored component file names in `lib/components/` unless the local folder already clearly uses another convention
+- Do not hardcode user-specific, project-specific, or environment-specific content in app data/viewmodel code, such as names, emails, workspace labels, key prefixes, or fallback identifiers
+- Do not add "兜底" business defaults like auto-falling back to `OT`, `ottersync`, `Themaoqiu`, or similar special-case values; if a field is required, make the requirement explicit instead of silently inventing one
+- Prefer theme text styles over ad-hoc font enlargement or extra bold weights; only override font size/weight when the surrounding screen already clearly establishes that exception
 
 Widget conventions from the reference project:
 

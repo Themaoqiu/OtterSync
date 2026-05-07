@@ -121,6 +121,7 @@ abstract final class AppSpace {
   static const double cardRadius = radiusLarge;
   static const double dialogRadius = radiusXLarge;
   static const double pillRadius = radiusFull;
+  static const double sectionGap = 24;
 }
 
 abstract final class AppShadows {
@@ -166,7 +167,7 @@ abstract final class AppDecorations {
       borderRadius: BorderRadius.circular(radius),
       border:
           border ??
-          Border.all(color: isDark ? palette.border : Colors.transparent),
+          Border.all(color: isDark ? palette.border : palette.divider),
       boxShadow: isDark ? null : (customShadow ?? AppShadows.cardSoft),
     );
   }

@@ -93,7 +93,7 @@ class _BacklogGroupCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     group.title,
-                    style: Theme.of(context).textTheme.headlineMedium,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
                 Icon(Icons.more_vert_rounded, color: palette.textSecondary),
@@ -146,9 +146,7 @@ class _BacklogGroupCard extends StatelessWidget {
                             children: [
                               Text(
                                 item.title,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.headlineMedium,
+                                style: Theme.of(context).textTheme.bodyLarge,
                               ),
                               const SizedBox(height: 18),
                               Text(
@@ -196,7 +194,9 @@ class _BacklogGroupCard extends StatelessWidget {
                   onTap: onCreate,
                   child: Text(
                     '创建',
-                    style: TextStyle(color: palette.primary, fontSize: 18),
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: palette.primary,
+                        ),
                   ),
                 ),
                 const Spacer(),
