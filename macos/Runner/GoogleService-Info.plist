@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyCU67cWkx8s6wFwobmWqm8w6NbEJAkeF2A</string>
+	<string>AIzaSyDxolqD9qqr4TUd5RkethHAiJqGORT5LCM</string>
 	<key>GCM_SENDER_ID</key>
-	<string>840014416024</string>
+	<string>785799948599</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.example.ottersync</string>
 	<key>PROJECT_ID</key>
-	<string>ottersync-b4833</string>
+	<string>ottersync-24da2</string>
 	<key>STORAGE_BUCKET</key>
-	<string>ottersync-b4833.firebasestorage.app</string>
+	<string>ottersync-24da2.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:840014416024:ios:25e40acfbf4c058129a8ed</string>
+	<string>1:785799948599:ios:2ee1804e00c045c79d12b2</string>
 </dict>
 </plist>

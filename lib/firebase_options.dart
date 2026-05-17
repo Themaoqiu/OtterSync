@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -44,39 +41,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDzgVw__jgM4ohvO5191_uWudkqWhEjCcg',
-    appId: '1:840014416024:android:c044f6a6a5c5907629a8ed',
-    messagingSenderId: '840014416024',
-    projectId: 'ottersync-b4833',
-    storageBucket: 'ottersync-b4833.firebasestorage.app',
+    apiKey: 'AIzaSyBBWndFh9gSIp8MtYxtf7Dgv-baebgUCC0',
+    appId: '1:785799948599:android:31ab403a3013f1349d12b2',
+    messagingSenderId: '785799948599',
+    projectId: 'ottersync-24da2',
+    storageBucket: 'ottersync-24da2.firebasestorage.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCDkJsfI_dSH-He4Tba2G3oYgIgm1HMVMw',
-    appId: '1:840014416024:web:1f5d4b89c4b8c07429a8ed',
-    messagingSenderId: '840014416024',
-    projectId: 'ottersync-b4833',
-    authDomain: 'ottersync-b4833.firebaseapp.com',
-    storageBucket: 'ottersync-b4833.firebasestorage.app',
-    measurementId: 'G-M7GJV6PR2R',
+    apiKey: 'AIzaSyAfxn6ALmPDe09iwH382kWC0C_7rJ-F1C0',
+    appId: '1:785799948599:web:301a3757662086289d12b2',
+    messagingSenderId: '785799948599',
+    projectId: 'ottersync-24da2',
+    authDomain: 'ottersync-24da2.firebaseapp.com',
+    storageBucket: 'ottersync-24da2.firebasestorage.app',
+    measurementId: 'G-SNCZ943NKQ',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCU67cWkx8s6wFwobmWqm8w6NbEJAkeF2A',
-    appId: '1:840014416024:ios:25e40acfbf4c058129a8ed',
-    messagingSenderId: '840014416024',
-    projectId: 'ottersync-b4833',
-    storageBucket: 'ottersync-b4833.firebasestorage.app',
+    apiKey: 'AIzaSyDxolqD9qqr4TUd5RkethHAiJqGORT5LCM',
+    appId: '1:785799948599:ios:2ee1804e00c045c79d12b2',
+    messagingSenderId: '785799948599',
+    projectId: 'ottersync-24da2',
+    storageBucket: 'ottersync-24da2.firebasestorage.app',
     iosBundleId: 'com.example.ottersync',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCU67cWkx8s6wFwobmWqm8w6NbEJAkeF2A',
-    appId: '1:840014416024:ios:25e40acfbf4c058129a8ed',
-    messagingSenderId: '840014416024',
-    projectId: 'ottersync-b4833',
-    storageBucket: 'ottersync-b4833.firebasestorage.app',
+    apiKey: 'AIzaSyDxolqD9qqr4TUd5RkethHAiJqGORT5LCM',
+    appId: '1:785799948599:ios:2ee1804e00c045c79d12b2',
+    messagingSenderId: '785799948599',
+    projectId: 'ottersync-24da2',
+    storageBucket: 'ottersync-24da2.firebasestorage.app',
     iosBundleId: 'com.example.ottersync',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyAfxn6ALmPDe09iwH382kWC0C_7rJ-F1C0',
+    appId: '1:785799948599:web:d6cb1923aef7dc779d12b2',
+    messagingSenderId: '785799948599',
+    projectId: 'ottersync-24da2',
+    authDomain: 'ottersync-24da2.firebaseapp.com',
+    storageBucket: 'ottersync-24da2.firebasestorage.app',
+    measurementId: 'G-JCLL06FLFS',
   );
 
 }
