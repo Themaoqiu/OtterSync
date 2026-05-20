@@ -4,9 +4,23 @@ import 'package:ottersync/components/Common/UserAvatar.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 
 class AccountProfileCard extends StatelessWidget {
-  const AccountProfileCard({super.key, required this.onAddSite});
+  const AccountProfileCard({
+    super.key,
+    required this.onAddSite,
+    required this.displayName,
+    required this.email,
+  });
 
   final VoidCallback onAddSite;
+  final String displayName;
+  final String email;
+
+  String _avatarLabel(String name) {
+    if (name.isEmpty) return '?';
+    final chars = name.trim().toUpperCase();
+    if (chars.length >= 2) return chars.substring(0, 2);
+    return chars;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,34 +31,25 @@ class AccountProfileCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const UserAvatar(label: 'MT', size: 60),
+          UserAvatar(label: _avatarLabel(displayName), size: 60),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('maoqiu The', style: theme.textTheme.titleLarge),
+                Text(displayName, style: theme.textTheme.titleLarge),
                 const SizedBox(height: 6),
                 Text(
-                  'themaoqiu@gmail.com',
+                  email,
                   style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
                 ),
                 const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  children: [
-                    Text(
-                      'Themaoqiu',
-                      style: theme.textTheme.bodyLarge?.copyWith(fontSize: 16),
-                    ),
-                    InkWell(
-                      onTap: onAddSite,
-                      child: Text(
-                        '添加网站',
-                        style: TextStyle(color: palette.primary, fontSize: 16),
-                      ),
-                    ),
-                  ],
+                InkWell(
+                  onTap: onAddSite,
+                  child: Text(
+                    '添加网站',
+                    style: TextStyle(color: palette.primary, fontSize: 16),
+                  ),
                 ),
               ],
             ),

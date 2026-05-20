@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ottersync/components/Account/AccountActionList.dart';
 import 'package:ottersync/components/Account/AccountProfileCard.dart';
 import 'package:ottersync/components/Common/demo_feedback.dart';
+import 'package:ottersync/state/auth_controller.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 
 class AccountView extends StatelessWidget {
@@ -11,8 +12,8 @@ class AccountView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = AppThemePalette.of(context);
+    final auth = AuthScope.of(context);
 
-    // Grouping the items visually creates a cleaner "iOS Settings" / "Premium App" vibe.
     const itemsGroup1 = [
       AccountActionItem(
         title: '邀请人员访问该工作区',
@@ -44,6 +45,8 @@ class AccountView extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         children: [
           AccountProfileCard(
+            displayName: auth.displayName,
+            email: auth.email,
             onAddSite: () => showDemoFeedback(context, '后续可在这里接入站点新增流程。'),
           ),
           const SizedBox(height: 32),
@@ -93,7 +96,7 @@ class AccountView extends StatelessWidget {
 
           Center(
             child: TextButton(
-              onPressed: () => showDemoFeedback(context, '登出流程预留'),
+              onPressed: () => auth.signOut(),
               child: Text(
                 '退出登录',
                 style: TextStyle(color: palette.danger, fontSize: 16),

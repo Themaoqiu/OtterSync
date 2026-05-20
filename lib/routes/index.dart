@@ -6,10 +6,13 @@ import 'package:ottersync/pages/BootstrapError/index.dart';
 import 'package:ottersync/pages/CreateWorkItem/index.dart';
 import 'package:ottersync/pages/Dashboard/index.dart';
 import 'package:ottersync/pages/Home/index.dart';
+import 'package:ottersync/pages/Login/index.dart';
 import 'package:ottersync/pages/Main/index.dart';
 import 'package:ottersync/pages/Notifications/index.dart';
+import 'package:ottersync/pages/Register/index.dart';
 import 'package:ottersync/pages/SpaceDetails/index.dart';
 import 'package:ottersync/pages/Spaces/index.dart';
+import 'package:ottersync/state/auth_controller.dart';
 import 'package:ottersync/state/theme_controller.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 
@@ -250,10 +253,31 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
 }
 
 final ThemeController _themeController = ThemeController();
+final AuthController _authController = AuthController();
 
 final GoRouter _rootRouter = GoRouter(
+  refreshListenable: _authController,
   initialLocation: '/home',
+  redirect: (context, state) {
+    final isLoggedIn = _authController.isLoggedIn;
+    final isAuthRoute = state.matchedLocation == '/login' ||
+        state.matchedLocation == '/register';
+    final isBootstrapRoute = state.matchedLocation == '/bootstrap-error';
+
+    if (isBootstrapRoute) return null;
+    if (!isLoggedIn && !isAuthRoute) return '/login';
+    if (isLoggedIn && isAuthRoute) return '/home';
+    return null;
+  },
   routes: [
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginPage(),
+    ),
+    GoRoute(
+      path: '/register',
+      builder: (context, state) => const RegisterPage(),
+    ),
     GoRoute(path: '/', redirect: (context, state) => '/home'),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
@@ -329,19 +353,22 @@ Widget getRootWidget({Object? bootstrapError}) {
     );
   }
 
-  return ThemeControllerScope(
-    notifier: _themeController,
-    child: AnimatedBuilder(
-      animation: _themeController,
-      builder: (context, child) {
-        return MaterialApp.router(
-          debugShowCheckedModeBanner: false,
-          theme: _buildAppTheme(AppColors.light, Brightness.light),
-          darkTheme: _buildAppTheme(AppColors.dark, Brightness.dark),
-          themeMode: _themeController.themeMode,
-          routerConfig: _rootRouter,
-        );
-      },
+  return AuthScope(
+    notifier: _authController,
+    child: ThemeControllerScope(
+      notifier: _themeController,
+      child: AnimatedBuilder(
+        animation: _themeController,
+        builder: (context, child) {
+          return MaterialApp.router(
+            debugShowCheckedModeBanner: false,
+            theme: _buildAppTheme(AppColors.light, Brightness.light),
+            darkTheme: _buildAppTheme(AppColors.dark, Brightness.dark),
+            themeMode: _themeController.themeMode,
+            routerConfig: _rootRouter,
+          );
+        },
+      ),
     ),
   );
 }
