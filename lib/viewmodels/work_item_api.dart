@@ -13,10 +13,12 @@ class WorkItemApiException implements Exception {
 }
 
 class WorkItemApi {
-  WorkItemApi({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  WorkItemApi({FirebaseFirestore? firestore, String? currentUid})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _currentUid = currentUid;
 
   final FirebaseFirestore _firestore;
+  final String? _currentUid;
 
   static const _metaCollection = '_meta';
   static const _workspacesCollection = 'workspaces';
@@ -486,6 +488,7 @@ class WorkItemApi {
         'parentId': parent?.id,
         'teamId': team?.id,
         'labelIds': labels.map((item) => item.id).toList(),
+        'createdBy': _currentUid,
         'createdAt': FieldValue.serverTimestamp(),
         'lastViewedAt': FieldValue.serverTimestamp(),
       };
@@ -542,8 +545,12 @@ class WorkItemApi {
       _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 1, title: '任务', subtitle: 'Task'));
       _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 2, title: '缺陷', subtitle: 'Bug'));
       _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 3, title: '故事', subtitle: 'Story'));
-      _seedLookup(transaction, _usersCollection, const LookupOption(id: 1, title: 'User 1', subtitle: 'user1@example.com'));
-      _seedLookup(transaction, _usersCollection, const LookupOption(id: 2, title: 'User 2', subtitle: 'user2@example.com'));
+      if (_currentUid != null) {
+        _seedLookup(transaction, _usersCollection, LookupOption(id: 1, title: _currentUid, subtitle: _currentUid));
+      } else {
+        _seedLookup(transaction, _usersCollection, const LookupOption(id: 1, title: 'User 1', subtitle: 'user1@example.com'));
+        _seedLookup(transaction, _usersCollection, const LookupOption(id: 2, title: 'User 2', subtitle: 'user2@example.com'));
+      }
       _seedLookup(transaction, _teamsCollection, const LookupOption(id: 1, title: 'Default Team', subtitle: 'team-1'));
     });
   }
