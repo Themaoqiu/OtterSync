@@ -65,7 +65,7 @@ class _AllWorkViewState extends State<AllWorkView> {
               child: Text('所有工作', style: theme.textTheme.headlineMedium),
             ),
             IconButton(
-              onPressed: () => showDemoFeedback(context, '搜索工作项接口已预留。'),
+              onPressed: () => context.push('/search?scope=workItems'),
               icon: Icon(
                 Icons.search_rounded,
                 color: palette.textSecondary,

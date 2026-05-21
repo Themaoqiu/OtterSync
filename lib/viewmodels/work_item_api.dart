@@ -526,6 +526,62 @@ class WorkItemApi {
     });
   }
 
+  /// 搜索工作项（客户端过滤）
+  Future<List<IssueSummary>> searchWorkItems(String query) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      if (query.trim().isEmpty) return [];
+      final maps = await _loadWorkItemMaps();
+      final lowerQuery = query.toLowerCase();
+      final filtered = maps.where((m) {
+        final summary = (m['summary'] as String? ?? '').toLowerCase();
+        final key = (m['key'] as String? ?? '').toLowerCase();
+        final description = (m['description'] as String? ?? '').toLowerCase();
+        return summary.contains(lowerQuery) ||
+            key.contains(lowerQuery) ||
+            description.contains(lowerQuery);
+      }).toList();
+      return filtered.map(_issueSummaryFromWorkItem).toList(growable: false);
+    });
+  }
+
+  /// 搜索空间
+  Future<List<JiraSpace>> searchSpaces(String query) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      if (query.trim().isEmpty) return [];
+      final snapshot = await _firestore.collection(_workspacesCollection).get();
+      final workItemSnapshot = await _firestore.collection(_workItemsCollection).get();
+      final counts = <int, int>{};
+      for (final doc in workItemSnapshot.docs) {
+        final data = doc.data();
+        final workspaceId = (data['workspaceId'] as num?)?.toInt();
+        if (workspaceId != null) {
+          counts.update(workspaceId, (value) => value + 1, ifAbsent: () => 1);
+        }
+      }
+
+      final lowerQuery = query.toLowerCase();
+      return snapshot.docs
+          .map((doc) {
+            final data = doc.data();
+            final id = (data['id'] as num).toInt();
+            return JiraSpace(
+              id: id,
+              name: data['title'] as String? ?? '',
+              key: data['subtitle'] as String? ?? '',
+              template: data['template'] as String? ?? '看板',
+              issueCount: counts[id] ?? 0,
+              avatar: buildSpaceAvatar('${data['subtitle'] ?? ''}${data['title'] ?? ''}'),
+            );
+          })
+          .where((space) =>
+              space.name.toLowerCase().contains(lowerQuery) ||
+              space.key.toLowerCase().contains(lowerQuery))
+          .toList(growable: false);
+    });
+  }
+
   Future<WorkItemResponse> createWorkItem(WorkItemCreateRequest payload) async {
     return _guard(() async {
       await _ensureSeedData();

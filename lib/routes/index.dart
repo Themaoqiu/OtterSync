@@ -10,6 +10,7 @@ import 'package:ottersync/pages/Login/index.dart';
 import 'package:ottersync/pages/Main/index.dart';
 import 'package:ottersync/pages/Notifications/index.dart';
 import 'package:ottersync/pages/Register/index.dart';
+import 'package:ottersync/pages/Search/index.dart';
 import 'package:ottersync/pages/SpaceDetails/index.dart';
 import 'package:ottersync/pages/Spaces/index.dart';
 import 'package:ottersync/pages/WorkItemDetail/index.dart';
@@ -355,6 +356,13 @@ final GoRouter _rootRouter = GoRouter(
       builder: (context, state) {
         final id = int.tryParse(state.pathParameters['workItemId'] ?? '');
         return WorkItemDetailView(workItemId: id);
+      },
+    ),
+    GoRoute(
+      path: '/search',
+      builder: (context, state) {
+        final scope = state.uri.queryParameters['scope'] ?? 'workItems';
+        return SearchView(scope: scope);
       },
     ),
   ],
