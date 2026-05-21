@@ -15,10 +15,23 @@ class WorkItemApiException implements Exception {
 class WorkItemApi {
   WorkItemApi({FirebaseFirestore? firestore, String? currentUid})
     : _firestore = firestore ?? FirebaseFirestore.instance,
-      _currentUid = currentUid;
+      _currentUid = currentUid ?? _defaultUid;
 
   final FirebaseFirestore _firestore;
   final String? _currentUid;
+
+  static String? _defaultUid;
+
+  /// Sets the default UID for all WorkItemApi instances.
+  /// Called once after authentication is confirmed.
+  static void init({required String uid}) {
+    _defaultUid = uid;
+  }
+
+  /// Clears the default UID on sign-out.
+  static void clear() {
+    _defaultUid = null;
+  }
 
   static const _metaCollection = '_meta';
   static const _workspacesCollection = 'workspaces';

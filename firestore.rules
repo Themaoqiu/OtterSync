@@ -13,6 +13,12 @@ service cloud.firestore {
       return request.auth.uid == uid;
     }
 
+    // Helper: request document has required string fields
+    function hasRequiredStrings(fields) {
+      return request.resource.data.keys().hasAll(fields)
+        && fields.every(f, request.resource.data[f] is string && request.resource.data[f].size() > 0);
+    }
+
     // _meta: authenticated users can read, only server/admin can write
     match /_meta/{doc} {
       allow read: if isSignedIn();
@@ -22,14 +28,20 @@ service cloud.firestore {
     // users: authenticated users can read all, only write their own
     match /users/{uid} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && isOwner(uid);
-      allow update, delete: if isSignedIn() && isOwner(uid);
+      allow create: if isSignedIn() && isOwner(uid)
+        && hasRequiredStrings(['uid', 'username', 'email'])
+        && request.resource.data['uid'] == request.auth.uid;
+      allow update: if isSignedIn() && isOwner(uid);
+      allow delete: if isSignedIn() && isOwner(uid);
     }
 
     // Shared resources: workspaces, workTypes, teams, labels
     // All authenticated users can read and write (collaboration model)
     match /workspaces/{doc} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && hasRequiredStrings(['title', 'subtitle']);
+      allow update, delete: if isSignedIn();
     }
 
     match /workTypes/{doc} {
@@ -46,7 +58,11 @@ service cloud.firestore {
 
     // Work items: authenticated users have full access (team collaboration)
     match /workItems/{doc} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && hasRequiredStrings(['summary', 'key'])
+        && request.resource.data['createdBy'] == request.auth.uid;
+      allow update, delete: if isSignedIn();
     }
   }
 }

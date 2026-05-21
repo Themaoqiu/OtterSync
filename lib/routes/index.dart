@@ -15,6 +15,7 @@ import 'package:ottersync/pages/Spaces/index.dart';
 import 'package:ottersync/state/auth_controller.dart';
 import 'package:ottersync/state/theme_controller.dart';
 import 'package:ottersync/theme/design_tokens.dart';
+import 'package:ottersync/viewmodels/work_item_api.dart';
 
 ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
   final base = ThemeData(
@@ -253,7 +254,15 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
 }
 
 final ThemeController _themeController = ThemeController();
-final AuthController _authController = AuthController();
+final AuthController _authController = AuthController()
+  ..addListener(() {
+    final uid = _authController.user?.uid;
+    if (uid != null) {
+      WorkItemApi.init(uid: uid);
+    } else {
+      WorkItemApi.clear();
+    }
+  });
 
 final GoRouter _rootRouter = GoRouter(
   refreshListenable: _authController,
