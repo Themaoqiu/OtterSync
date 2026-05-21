@@ -220,8 +220,11 @@ class _HomeViewState extends State<HomeView> {
                     else
                       RecentProjectsCard(
                         items: _buildViewedDisplayItems().take(2).toList(growable: false),
-                        onItemTap: (item) =>
-                            showDemoFeedback(context, '将打开 ${item.key} 的详情页。'),
+                        onItemTap: (item) {
+                          if (item.id != null) {
+                            context.push('/work-item/${item.id}');
+                          }
+                        },
                       ),
                     const SizedBox(height: 18),
                     Text(
@@ -234,8 +237,11 @@ class _HomeViewState extends State<HomeView> {
                     if (_viewedItems.length > 2)
                       RecentProjectsCard(
                         items: _buildViewedDisplayItems().skip(2).take(4).toList(growable: false),
-                        onItemTap: (item) =>
-                            showDemoFeedback(context, '将打开 ${item.key} 的详情页。'),
+                        onItemTap: (item) {
+                          if (item.id != null) {
+                            context.push('/work-item/${item.id}');
+                          }
+                        },
                       ),
                   ] else ...[
                     const SizedBox(height: 18),
@@ -258,8 +264,11 @@ class _HomeViewState extends State<HomeView> {
                     else
                       RecentProjectsCard(
                         items: _dynamicItems,
-                        onItemTap: (item) =>
-                            showDemoFeedback(context, '将打开 ${item.key} 的详情页。'),
+                        onItemTap: (item) {
+                          if (item.id != null) {
+                            context.push('/work-item/${item.id}');
+                          }
+                        },
                       ),
                   ],
                 ],
@@ -351,6 +360,7 @@ class _HomeViewState extends State<HomeView> {
       ),
       ..._viewedItems.map(
         (item) => IssueSummary(
+          id: item.id,
           title: item.title,
           key: item.key,
           subtitle: item.subtitle == null

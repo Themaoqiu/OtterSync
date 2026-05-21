@@ -132,7 +132,11 @@ class _DashboardViewState extends State<DashboardView> {
           if (_issues.isNotEmpty)
             AssignedIssuesCard(
               issues: _issues,
-              onIssueTap: (item) => showDemoFeedback(context, '将打开 ${item.key}。'),
+              onIssueTap: (item) {
+                if (item.id != null) {
+                  context.push('/work-item/${item.id}');
+                }
+              },
             ),
           if (_issues.isNotEmpty) const SizedBox(height: 24),
           if (_activities.isNotEmpty)

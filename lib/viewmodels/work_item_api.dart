@@ -180,6 +180,16 @@ class WorkItemApi {
     });
   }
 
+  Future<WorkItemResponse?> getWorkItemById(int id) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final doc =
+          await _firestore.collection(_workItemsCollection).doc('$id').get();
+      if (!doc.exists) return null;
+      return WorkItemResponse.fromMap(doc.data() as Map<String, dynamic>);
+    });
+  }
+
   Future<List<IssueSummary>> loadRecentProjects({int limit = 4}) async {
     return _guard(() async {
       await _ensureSeedData();
@@ -247,6 +257,7 @@ class WorkItemApi {
           title: '工作项有新动态',
           description: '$key · $summary',
           route: '/all-work',
+          workItemId: (data['id'] as num?)?.toInt(),
         );
       }).toList(growable: false);
     });
@@ -738,6 +749,7 @@ class WorkItemApi {
     final status = _statusFromData(data);
     final bucket = _bucketFromData(data);
     return IssueSummary(
+      id: (data['id'] as num?)?.toInt(),
       title: data['summary'] as String? ?? '',
       key: data['key'] as String? ?? '',
       subtitle: workspace['title'] as String?,

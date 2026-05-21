@@ -133,6 +133,7 @@ class _AllWorkViewState extends State<AllWorkView> {
                           title: item.title,
                           subtitle: item.subtitle ?? 'ID-${item.id}',
                           status: 'TODO',
+                          onTap: () => context.push('/work-item/${item.id}'),
                         ),
                       )
                       .toList(),
@@ -155,8 +156,7 @@ class _AllWorkViewState extends State<AllWorkView> {
                         borderRadius: BorderRadius.circular(
                           AppSpace.radiusLarge,
                         ),
-                        onTap: () =>
-                            showDemoFeedback(context, '将打开 ${item.title}。'),
+                        onTap: () => context.push('/work-item/${item.id}'),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(

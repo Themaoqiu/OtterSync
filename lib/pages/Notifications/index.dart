@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
 import 'package:ottersync/components/Common/UserAvatar.dart';
-import 'package:ottersync/components/Common/demo_feedback.dart';
 import 'package:ottersync/state/theme_controller.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
@@ -95,8 +94,11 @@ class _NotificationsViewState extends State<NotificationsView> {
                     const SizedBox(width: 14),
                     Expanded(
                       child: InkWell(
-                        onTap: () =>
-                            showDemoFeedback(context, '${item.title} 已保留详情入口。'),
+                        onTap: () {
+                          if (item.workItemId != null) {
+                            context.push('/work-item/${item.workItemId}');
+                          }
+                        },
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

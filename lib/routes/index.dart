@@ -12,6 +12,7 @@ import 'package:ottersync/pages/Notifications/index.dart';
 import 'package:ottersync/pages/Register/index.dart';
 import 'package:ottersync/pages/SpaceDetails/index.dart';
 import 'package:ottersync/pages/Spaces/index.dart';
+import 'package:ottersync/pages/WorkItemDetail/index.dart';
 import 'package:ottersync/state/auth_controller.dart';
 import 'package:ottersync/state/theme_controller.dart';
 import 'package:ottersync/theme/design_tokens.dart';
@@ -348,6 +349,13 @@ final GoRouter _rootRouter = GoRouter(
     GoRoute(
       path: '/create-work-item',
       builder: (context, state) => const CreateWorkItemPage(),
+    ),
+    GoRoute(
+      path: '/work-item/:workItemId',
+      builder: (context, state) {
+        final id = int.tryParse(state.pathParameters['workItemId'] ?? '');
+        return WorkItemDetailView(workItemId: id);
+      },
     ),
   ],
 );
