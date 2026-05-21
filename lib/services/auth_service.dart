@@ -180,8 +180,12 @@ class AuthService {
         return '操作过于频繁，请稍后再试。';
       case 'network-request-failed':
         return '网络连接失败，请检查网络设置。';
+      case 'operation-not-allowed':
+        return '该登录方式未启用，请在 Firebase Console 中开启 Email/Password 认证。';
+      case 'admin-restricted-operation':
+        return '该操作被限制，请检查 Firebase 认证配置。';
       default:
-        return '操作失败，请稍后重试。';
+        return '操作失败（$code），请稍后重试。';
     }
   }
 }

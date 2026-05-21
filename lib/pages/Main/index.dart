@@ -40,26 +40,24 @@ class MainPage extends StatelessWidget {
             ),
           ],
         ),
-        child: SafeArea(
-          child: NavigationBar(
-            selectedIndex: navigationShell.currentIndex,
-            backgroundColor: palette.surface,
-            destinations: _tabs
-                .map(
-                  (tab) => NavigationDestination(
-                    icon: Icon(tab.icon),
-                    selectedIcon: Icon(tab.selectedIcon),
-                    label: tab.label,
-                  ),
-                )
-                .toList(),
-            onDestinationSelected: (index) {
-              navigationShell.goBranch(
-                index,
-                initialLocation: index == navigationShell.currentIndex,
-              );
-            },
-          ),
+        child: NavigationBar(
+          selectedIndex: navigationShell.currentIndex,
+          backgroundColor: palette.surface,
+          destinations: _tabs
+              .map(
+                (tab) => NavigationDestination(
+                  icon: Icon(tab.icon),
+                  selectedIcon: Icon(tab.selectedIcon),
+                  label: tab.label,
+                ),
+              )
+              .toList(),
+          onDestinationSelected: (index) {
+            navigationShell.goBranch(
+              index,
+              initialLocation: index == navigationShell.currentIndex,
+            );
+          },
         ),
       ),
     );

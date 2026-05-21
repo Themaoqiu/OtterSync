@@ -79,32 +79,43 @@ class HomeOverviewCard extends StatelessWidget {
                   ),
                 ),
               ),
-              IconButton(
-                onPressed: onCopy,
-                icon: Icon(
-                  Icons.content_copy_outlined,
-                  color: palette.textPrimary,
-                ),
-                iconSize: 20,
-                visualDensity: VisualDensity.compact,
-              ),
-              IconButton(
-                onPressed: onLike,
-                icon: Icon(
-                  Icons.thumb_up_alt_outlined,
-                  color: palette.textPrimary,
-                ),
-                iconSize: 20,
-                visualDensity: VisualDensity.compact,
-              ),
-              IconButton(
-                onPressed: onDislike,
-                icon: Icon(
-                  Icons.thumb_down_alt_outlined,
-                  color: palette.textPrimary,
-                ),
-                iconSize: 20,
-                visualDensity: VisualDensity.compact,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: onCopy,
+                    icon: Icon(
+                      Icons.content_copy_outlined,
+                      color: palette.textPrimary,
+                    ),
+                    iconSize: 20,
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(4),
+                  ),
+                  IconButton(
+                    onPressed: onLike,
+                    icon: Icon(
+                      Icons.thumb_up_alt_outlined,
+                      color: palette.textPrimary,
+                    ),
+                    iconSize: 20,
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(4),
+                  ),
+                  IconButton(
+                    onPressed: onDislike,
+                    icon: Icon(
+                      Icons.thumb_down_alt_outlined,
+                      color: palette.textPrimary,
+                    ),
+                    iconSize: 20,
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(4),
+                  ),
+                ],
               ),
             ],
           ),

@@ -50,6 +50,8 @@ class _RegisterPageState extends State<RegisterPage> {
       );
     } on AuthServiceException catch (e) {
       _showError(e.message);
+    } catch (e) {
+      _showError('注册失败：$e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

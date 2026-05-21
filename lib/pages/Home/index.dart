@@ -45,45 +45,41 @@ class _HomeViewState extends State<HomeView> {
     final palette = AppThemePalette.of(context);
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: palette.scaffold,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-              child: Column(
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+          child: Column(
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      InkWell(
-                        onTap: () => context.push('/account'),
-                        borderRadius: BorderRadius.circular(999),
-                        child: const UserAvatar(label: 'MT'),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: const SizedBox.shrink(),
-                      ),
-                      IconButton(
-                        onPressed: () => context.push('/create-work-item'),
-                        icon: Icon(
-                          Icons.add_rounded,
-                          color: palette.primary,
-                          size: 30,
-                        ),
-                        tooltip: '创建工作项目',
-                      ),
-                    ],
+                  InkWell(
+                    onTap: () => context.push('/account'),
+                    borderRadius: BorderRadius.circular(999),
+                    child: const UserAvatar(label: 'MT'),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: SizedBox.shrink(),
+                  ),
+                  IconButton(
+                    onPressed: () => context.push('/create-work-item'),
+                    icon: Icon(
+                      Icons.add_rounded,
+                      color: palette.primary,
+                      size: 30,
+                    ),
+                    tooltip: '创建工作项目',
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
-                children: [
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
+            children: [
                   SectionHeader(
                     title: '今日概述',
                     expanded: _overviewExpanded,
@@ -257,9 +253,7 @@ class _HomeViewState extends State<HomeView> {
               ),
             ),
           ],
-        ),
-      ),
-    );
+        );
   }
 
   Widget _buildErrorState() {

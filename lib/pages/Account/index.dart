@@ -8,6 +8,39 @@ import 'package:ottersync/theme/design_tokens.dart';
 class AccountView extends StatelessWidget {
   const AccountView({super.key});
 
+  Future<void> _handleSignOut(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('退出登录'),
+        content: const Text('确定要退出当前账号吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              '退出',
+              style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await AuthScope.of(context).signOut();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('退出失败：$e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -96,7 +129,7 @@ class AccountView extends StatelessWidget {
 
           Center(
             child: TextButton(
-              onPressed: () => auth.signOut(),
+              onPressed: () => _handleSignOut(context),
               child: Text(
                 '退出登录',
                 style: TextStyle(color: palette.danger, fontSize: 16),

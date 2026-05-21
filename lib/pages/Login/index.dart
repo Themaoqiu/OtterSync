@@ -45,6 +45,8 @@ class _LoginPageState extends State<LoginPage> {
       await AuthScope.of(context).signIn(account, password);
     } on AuthServiceException catch (e) {
       _showError(e.message);
+    } catch (e) {
+      _showError('登录失败：$e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
