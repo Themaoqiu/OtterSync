@@ -615,6 +615,51 @@ class WorkItemApi {
     });
   }
 
+  /// 更新工作区名称
+  Future<void> updateWorkspace(int id, {String? name, String? key}) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final data = <String, dynamic>{};
+      if (name != null) data['title'] = name;
+      if (key != null) data['subtitle'] = key;
+      await _firestore.collection(_workspacesCollection).doc('$id').update(data);
+    });
+  }
+
+  /// 删除工作区（级联删除关联工作项）
+  Future<void> deleteWorkspace(int id) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final workItems = await _firestore
+          .collection(_workItemsCollection)
+          .where('workspaceId', isEqualTo: id)
+          .get();
+      final batch = _firestore.batch();
+      for (final doc in workItems.docs) {
+        batch.delete(doc.reference);
+      }
+      batch.delete(_firestore.collection(_workspacesCollection).doc('$id'));
+      await batch.commit();
+    });
+  }
+
+  /// 创建待办事项（简化版）
+  Future<WorkItemResponse> createBacklogItem({
+    required int workspaceId,
+    required String summary,
+    String? description,
+  }) async {
+    return createWorkItem(WorkItemCreateRequest(
+      workspaceId: workspaceId,
+      workTypeId: 1,
+      summary: summary,
+      reporterId: 1,
+      bucket: WorkItemBucket.backlog,
+      status: WorkItemStatus.todo,
+      description: description,
+    ));
+  }
+
   Future<WorkItemResponse> createWorkItem(WorkItemCreateRequest payload) async {
     return _guard(() async {
       await _ensureSeedData();

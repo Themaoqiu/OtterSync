@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
-import 'package:ottersync/components/Common/demo_feedback.dart';
 import 'package:ottersync/components/SpaceDetails/BacklogTabView.dart';
 import 'package:ottersync/components/SpaceDetails/BoardTabView.dart';
 import 'package:ottersync/components/SpaceDetails/CalendarTabView.dart';
@@ -76,7 +75,7 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
                   ),
                 ),
                 IconButton(
-                  onPressed: () => showDemoFeedback(context, '更多空间操作接口已预留。'),
+                  onPressed: _openMoreActions,
                   icon: const Icon(Icons.more_vert_rounded),
                 ),
               ],
@@ -167,12 +166,168 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
         else
           BacklogTabView(
             groups: filteredGroups,
-            onCreate: () => showDemoFeedback(context, '创建待办事项接口已预留。'),
+            onCreate: _createBacklogItem,
           ),
         ReportTabView(metrics: _metrics),
         SettingsTabView(space: _space!),
       ],
     );
+  }
+
+  void _openMoreActions() {
+    final palette = AppThemePalette.of(context);
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.edit_outlined, color: palette.textPrimary),
+              title: const Text('编辑空间名称'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _editSpaceName();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delete_outline_rounded, color: palette.danger),
+              title: Text(
+                '删除空间',
+                style: TextStyle(color: palette.danger),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _confirmDeleteSpace();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editSpaceName() async {
+    if (_space == null) return;
+    final controller = TextEditingController(text: _space!.name);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('编辑空间名称'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: '空间名称'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || result.isEmpty || !mounted) return;
+    try {
+      await _api.updateWorkspace(_space!.id, name: result);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('空间名称已更新')),
+      );
+      await _loadSpaceDetails();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('更新失败：$e')),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteSpace() async {
+    if (_space == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除空间'),
+        content: Text('确定要删除「${_space!.name}」吗？该空间下的所有工作项将被一并删除，此操作不可撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              '删除',
+              style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await _api.deleteWorkspace(_space!.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('空间已删除')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('删除失败：$e')),
+      );
+    }
+  }
+
+  Future<void> _createBacklogItem() async {
+    if (_space == null) return;
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('创建待办事项'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: '摘要'),
+          textInputAction: TextInputAction.done,
+          onSubmitted: (value) => Navigator.pop(ctx, value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('创建'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || result.isEmpty || !mounted) return;
+    try {
+      await _api.createBacklogItem(
+        workspaceId: _space!.id,
+        summary: result,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('待办事项已创建')),
+      );
+      await _loadSpaceDetails();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('创建失败：$e')),
+      );
+    }
   }
 
   void _openStatusFilter() {
