@@ -148,7 +148,22 @@ class _DashboardViewState extends State<DashboardView> {
         ],
         const SizedBox(height: 24),
         DashboardFeedbackCard(
-          onTap: () => showDemoFeedback(context, '反馈提交接口已预留。'),
+          onTap: () async {
+            try {
+              await _api.submitFeedback(
+                targetType: 'dashboard',
+                targetId: 'widget_request',
+                type: 'like',
+              );
+              if (context.mounted) {
+                showDemoFeedback(context, '感谢您的反馈！');
+              }
+            } catch (e) {
+              if (context.mounted) {
+                showDemoFeedback(context, '反馈提交失败：$e');
+              }
+            }
+          },
         ),
       ],
     );

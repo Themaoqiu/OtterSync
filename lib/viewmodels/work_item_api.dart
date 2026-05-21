@@ -40,6 +40,9 @@ class WorkItemApi {
   static const _teamsCollection = 'teams';
   static const _labelsCollection = 'labels';
   static const _workItemsCollection = 'workItems';
+  static const _feedbackCollectionName = 'feedback';
+  CollectionReference get _feedbackCollection =>
+      _firestore.collection(_feedbackCollectionName);
 
   Future<List<JiraSpace>> listSpaces() async {
     return _guard(() async {
@@ -187,6 +190,73 @@ class WorkItemApi {
           await _firestore.collection(_workItemsCollection).doc('$id').get();
       if (!doc.exists) return null;
       return WorkItemResponse.fromMap(doc.data() as Map<String, dynamic>);
+    });
+  }
+
+  /// 提交反馈（点赞/踩）
+  Future<void> submitFeedback({
+    required String targetType,
+    required String targetId,
+    required String type,
+    String? comment,
+  }) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final uid = _currentUid;
+      if (uid == null) {
+        throw const WorkItemApiException('请先登录。');
+      }
+
+      // 查询是否已有同类型反馈，有则先取消
+      final existing = await _feedbackCollection
+          .where('userId', isEqualTo: uid)
+          .where('targetType', isEqualTo: targetType)
+          .where('targetId', isEqualTo: targetId)
+          .get();
+
+      for (final doc in existing.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['type'] == type) {
+          // 已有同类型反馈，取消（toggle）
+          await _feedbackCollection.doc(doc.id).delete();
+          return;
+        }
+        // 互斥：先取消相反类型
+        await _feedbackCollection.doc(doc.id).delete();
+      }
+
+      final id = await _nextId('feedback');
+      await _feedbackCollection.doc('$id').set({
+        'id': id,
+        'userId': uid,
+        'targetType': targetType,
+        'targetId': targetId,
+        'type': type,
+        'comment': comment,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  /// 查询当前用户对某目标的反馈状态
+  Future<String?> getFeedbackStatus({
+    required String targetType,
+    required String targetId,
+  }) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final uid = _currentUid;
+      if (uid == null) return null;
+
+      final snapshot = await _feedbackCollection
+          .where('userId', isEqualTo: uid)
+          .where('targetType', isEqualTo: targetType)
+          .where('targetId', isEqualTo: targetId)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) return null;
+      return (snapshot.docs.first.data() as Map<String, dynamic>)['type'] as String?;
     });
   }
 
@@ -561,6 +631,7 @@ class WorkItemApi {
         'teams': 1,
         'labels': 0,
         'workItems': 0,
+        'feedback': 0,
       });
       transaction.set(bootstrapRef, {
         'seededAt': FieldValue.serverTimestamp(),

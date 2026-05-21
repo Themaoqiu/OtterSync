@@ -33,6 +33,8 @@ class _HomeViewState extends State<HomeView> {
   List<QuickAccessItem> _quickAccessItems = const [];
   List<IssueSummary> _viewedItems = const [];
   List<IssueSummary> _dynamicItems = const [];
+  bool _isLiked = false;
+  bool _isDisliked = false;
 
   @override
   void initState() {
@@ -101,6 +103,8 @@ class _HomeViewState extends State<HomeView> {
                                   ? 'No recent work activities found in the last 4 days.'
                                   : '${_dynamicItems.length} recent work activities found in the last 4 days.',
                               description: overviewDesc,
+                              isLiked: _isLiked,
+                              isDisliked: _isDisliked,
                               onCopy: () async {
                                 await Clipboard.setData(
                                   ClipboardData(text: overviewDesc),
@@ -109,10 +113,8 @@ class _HomeViewState extends State<HomeView> {
                                   showDemoFeedback(context, '已复制到剪贴板');
                                 }
                               },
-                              onLike: () =>
-                                  showDemoFeedback(context, '反馈提交接口已预留。'),
-                              onDislike: () =>
-                                  showDemoFeedback(context, '反馈提交接口已预留。'),
+                              onLike: () => _submitFeedback('like'),
+                              onDislike: () => _submitFeedback('dislike'),
                               onMore: () => setState(() {
                                 _overviewExpanded = !_overviewExpanded;
                               }),
@@ -297,6 +299,10 @@ class _HomeViewState extends State<HomeView> {
       final quickAccess = await _api.loadHomeQuickAccess();
       final viewedItems = await _api.loadViewedItems();
       final dynamicItems = await _api.loadRecentDynamicItems();
+      final feedbackStatus = await _api.getFeedbackStatus(
+        targetType: 'overview',
+        targetId: 'daily',
+      );
       if (!mounted) {
         return;
       }
@@ -304,6 +310,8 @@ class _HomeViewState extends State<HomeView> {
         _quickAccessItems = quickAccess;
         _viewedItems = viewedItems;
         _dynamicItems = dynamicItems;
+        _isLiked = feedbackStatus == 'like';
+        _isDisliked = feedbackStatus == 'dislike';
         _loading = false;
       });
     } catch (error) {
@@ -314,6 +322,29 @@ class _HomeViewState extends State<HomeView> {
         _error = '$error';
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _submitFeedback(String type) async {
+    try {
+      await _api.submitFeedback(
+        targetType: 'overview',
+        targetId: 'daily',
+        type: type,
+      );
+      if (!mounted) return;
+      final status = await _api.getFeedbackStatus(
+        targetType: 'overview',
+        targetId: 'daily',
+      );
+      if (!mounted) return;
+      setState(() {
+        _isLiked = status == 'like';
+        _isDisliked = status == 'dislike';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      showDemoFeedback(context, '反馈提交失败：$e');
     }
   }
 

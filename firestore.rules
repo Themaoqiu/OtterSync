@@ -64,5 +64,15 @@ service cloud.firestore {
         && request.resource.data['createdBy'] == request.auth.uid;
       allow update, delete: if isSignedIn();
     }
+
+    // Feedback: users can read all, create their own, delete their own
+    match /feedback/{doc} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.type in ['like', 'dislike'];
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if false;
+    }
   }
 }
