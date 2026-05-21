@@ -92,7 +92,7 @@ class _AllWorkViewState extends State<AllWorkView> {
           onViewModeChanged: (mode) => setState(() => _viewMode = mode),
         ),
         const SizedBox(height: 32),
-        Text('待办', style: theme.textTheme.titleLarge),
+        Text(_selectedFilter.title, style: theme.textTheme.titleLarge),
         const SizedBox(height: 16),
         if (_loading)
           const Padding(
@@ -115,7 +115,7 @@ class _AllWorkViewState extends State<AllWorkView> {
               ],
             ),
           )
-        else if (_workItems.isEmpty)
+        else if (_filteredItems.isEmpty)
           const SizedBox(
             height: 420,
             child: EmptyStateView(
@@ -127,7 +127,7 @@ class _AllWorkViewState extends State<AllWorkView> {
         else
           _viewMode == AllWorkViewMode.list
               ? Column(
-                  children: _workItems
+                  children: _filteredItems
                       .map(
                         (item) => IssueListTile(
                           title: item.title,
@@ -147,9 +147,9 @@ class _AllWorkViewState extends State<AllWorkView> {
                     mainAxisSpacing: 14,
                     childAspectRatio: 1.1,
                   ),
-                  itemCount: _workItems.length,
+                  itemCount: _filteredItems.length,
                   itemBuilder: (context, index) {
-                    final item = _workItems[index];
+                    final item = _filteredItems[index];
                     return AppSurface(
                       padding: const EdgeInsets.all(0),
                       child: InkWell(
@@ -199,6 +199,19 @@ class _AllWorkViewState extends State<AllWorkView> {
                 ),
       ],
     );
+  }
+
+  List<LookupOption> get _filteredItems {
+    final title = _selectedFilter.title;
+    if (title == '已完成的工作项') {
+      return _workItems.where((item) => item.status == 'done').toList();
+    }
+    if (title == '未处理工作项') {
+      return _workItems
+          .where((item) => item.status == 'todo' || item.status == null)
+          .toList();
+    }
+    return _workItems;
   }
 
   Future<void> _openFilterSheet() async {

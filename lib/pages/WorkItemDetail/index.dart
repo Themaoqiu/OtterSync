@@ -46,6 +46,13 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
         _loading = false;
         if (item == null) _error = '工作项不存在';
       });
+      if (item != null) {
+        _api.recordRecentView(
+          workItemId: item.id,
+          workItemKey: item.key,
+          workItemTitle: item.summary,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -126,7 +133,10 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
           spacing: 8,
           runSpacing: 8,
           children: [
-            _StatusChip(status: item.status),
+            GestureDetector(
+              onTap: () => _updateStatus(_nextStatus(item.status)),
+              child: _StatusChip(status: item.status),
+            ),
             _TypeChip(workType: item.workType),
             if (item.bucket == WorkItemBucket.sprint)
               _TagChip(
@@ -249,6 +259,51 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
 
   String _formatDateTime(DateTime date) {
     return '${_formatDate(date)} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _updateStatus(WorkItemStatus newStatus) async {
+    try {
+      await _api.updateWorkItemStatus(_item!.id, newStatus);
+      if (!mounted) return;
+      setState(() {
+        _item = WorkItemResponse(
+          id: _item!.id,
+          summary: _item!.summary,
+          workspace: _item!.workspace,
+          workType: _item!.workType,
+          reporter: _item!.reporter,
+          labels: _item!.labels,
+          attachments: _item!.attachments,
+          key: _item!.key,
+          bucket: _item!.bucket,
+          status: newStatus,
+          description: _item!.description,
+          assignee: _item!.assignee,
+          parent: _item!.parent,
+          team: _item!.team,
+          dueDate: _item!.dueDate,
+          startDate: _item!.startDate,
+          createdAt: _item!.createdAt,
+          lastViewedAt: _item!.lastViewedAt,
+        );
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('状态更新失败：$e')),
+      );
+    }
+  }
+
+  WorkItemStatus _nextStatus(WorkItemStatus current) {
+    switch (current) {
+      case WorkItemStatus.todo:
+        return WorkItemStatus.inProgress;
+      case WorkItemStatus.inProgress:
+        return WorkItemStatus.done;
+      case WorkItemStatus.done:
+        return WorkItemStatus.todo;
+    }
   }
 
   IconData _attachmentIcon(AttachmentKind kind) {

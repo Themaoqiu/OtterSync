@@ -8,6 +8,7 @@ class LookupOption {
     required this.id,
     required this.title,
     this.subtitle,
+    this.status,
   });
 
   factory LookupOption.fromMap(Map<String, dynamic> map) {
@@ -15,12 +16,14 @@ class LookupOption {
       id: (map['id'] as num).toInt(),
       title: map['title'] as String? ?? '',
       subtitle: map['subtitle'] as String?,
+      status: map['status'] as String?,
     );
   }
 
   final int id;
   final String title;
   final String? subtitle;
+  final String? status;
 
   Map<String, dynamic> toMap() {
     return {

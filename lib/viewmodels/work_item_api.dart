@@ -43,6 +43,8 @@ class WorkItemApi {
   static const _feedbackCollectionName = 'feedback';
   CollectionReference get _feedbackCollection =>
       _firestore.collection(_feedbackCollectionName);
+  CollectionReference get _recentViewsCollection =>
+      _firestore.collection('recentViews');
 
   Future<List<JiraSpace>> listSpaces() async {
     return _guard(() async {
@@ -260,6 +262,36 @@ class WorkItemApi {
     });
   }
 
+  /// 更新工作项状态
+  Future<void> updateWorkItemStatus(int id, WorkItemStatus status) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      await _firestore.collection(_workItemsCollection).doc('$id').update({
+        'status': status.name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  /// 记录最近查看
+  Future<void> recordRecentView({
+    required int workItemId,
+    required String workItemKey,
+    required String workItemTitle,
+  }) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final docId = '${_currentUid}_$workItemId';
+      await _recentViewsCollection.doc(docId).set({
+        'userId': _currentUid,
+        'targetId': workItemId,
+        'targetKey': workItemKey,
+        'targetTitle': workItemTitle,
+        'viewedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
   Future<List<IssueSummary>> loadRecentProjects({int limit = 4}) async {
     return _guard(() async {
       await _ensureSeedData();
@@ -465,6 +497,7 @@ class WorkItemApi {
               id: (data['id'] as num).toInt(),
               title: data['summary'] as String? ?? '',
               subtitle: data['key'] as String?,
+              status: data['status'] as String?,
             ),
           )
           .where((item) => _matchesQuery(item.title, query) || _matchesQuery(item.subtitle ?? '', query))
