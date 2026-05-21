@@ -22,8 +22,8 @@ class AssignedIssuesCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('分配给我', style: theme.textTheme.titleLarge),
-          const SizedBox(height: 24),
+          Text('分配给我', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(child: Text('事务类型', style: theme.textTheme.bodyMedium)),
@@ -50,9 +50,9 @@ class AssignedIssuesCard extends StatelessWidget {
                     Icon(
                       Icons.check_box_outline_blank_rounded,
                       color: palette.primary,
-                      size: 34,
+                      size: 24,
                     ),
-                    const SizedBox(width: 18),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(item.key, style: theme.textTheme.titleMedium),
                     ),

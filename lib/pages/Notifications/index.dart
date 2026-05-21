@@ -47,14 +47,14 @@ class _NotificationsViewState extends State<NotificationsView> {
               child: const UserAvatar(label: 'MT'),
             ),
             const SizedBox(width: 16),
-            Expanded(child: Text('通知', style: theme.textTheme.headlineMedium)),
+            Expanded(child: Text('通知', style: theme.textTheme.titleLarge)),
             Switch(
               value: themeController.isDarkMode,
               onChanged: (_) => themeController.toggle(),
             ),
           ],
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
         if (_loading)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
@@ -80,15 +80,16 @@ class _NotificationsViewState extends State<NotificationsView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: 44,
-                      height: 44,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         color: palette.primarySoft,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         Icons.notifications_active_outlined,
                         color: palette.primary,
+                        size: 20,
                       ),
                     ),
                     const SizedBox(width: 14),

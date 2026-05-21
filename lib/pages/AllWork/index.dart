@@ -84,15 +84,15 @@ class _AllWorkViewState extends State<AllWorkView> {
             ),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         AllWorkToolbar(
           selectedFilter: _selectedFilter,
           viewMode: _viewMode,
           onFilterTap: _openFilterSheet,
           onViewModeChanged: (mode) => setState(() => _viewMode = mode),
         ),
-        const SizedBox(height: 32),
-        Text(_selectedFilter.title, style: theme.textTheme.titleLarge),
+        const SizedBox(height: 20),
+        Text(_selectedFilter.title, style: theme.textTheme.titleMedium),
         const SizedBox(height: 16),
         if (_loading)
           const Padding(

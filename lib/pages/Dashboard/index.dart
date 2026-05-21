@@ -52,9 +52,9 @@ class _DashboardViewState extends State<DashboardView> {
             const Spacer(),
           ],
         ),
-        const SizedBox(height: 24),
-        Text('仪表板', style: theme.textTheme.headlineMedium),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+        Text('仪表板', style: theme.textTheme.titleLarge),
+        const SizedBox(height: 16),
         AppSurface(
           padding: const EdgeInsets.all(0),
           child: InkWell(
@@ -88,11 +88,11 @@ class _DashboardViewState extends State<DashboardView> {
               ),
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
                   Expanded(
-                    child: Text('默认仪表板', style: theme.textTheme.titleLarge),
+                    child: Text('默认仪表板', style: theme.textTheme.titleMedium),
                   ),
                   Container(
                     padding: const EdgeInsets.all(4),
@@ -111,7 +111,7 @@ class _DashboardViewState extends State<DashboardView> {
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         if (_loading)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
