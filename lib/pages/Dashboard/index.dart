@@ -59,7 +59,34 @@ class _DashboardViewState extends State<DashboardView> {
           padding: const EdgeInsets.all(0),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
-            onTap: () => showDemoFeedback(context, '仪表板切换接口已预留。'),
+            onTap: () => showModalBottomSheet(
+              context: context,
+              builder: (ctx) => SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                      title: const Text('默认仪表板'),
+                      leading: Icon(
+                        Icons.dashboard_rounded,
+                        color: palette.primary,
+                      ),
+                      trailing: Icon(
+                        Icons.check_rounded,
+                        color: palette.primary,
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                        '暂无其他仪表板',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
               child: Row(

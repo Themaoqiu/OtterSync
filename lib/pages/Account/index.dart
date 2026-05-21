@@ -109,7 +109,7 @@ class AccountView extends StatelessWidget {
           const SizedBox(height: 8),
           AccountActionList(
             items: itemsGroup2,
-            onTap: (item) => showDemoFeedback(context, '${item.title} 视图未实现。'),
+            onTap: (item) => showDemoFeedback(context, '功能开发中，敬请期待'),
           ),
 
           const SizedBox(height: 24),
@@ -123,7 +123,15 @@ class AccountView extends StatelessWidget {
           const SizedBox(height: 8),
           AccountActionList(
             items: itemsGroup3,
-            onTap: (item) => showDemoFeedback(context, '${item.title} 操作已代理。'),
+            onTap: (item) {
+              if (item.title == '提供反馈') {
+                showDemoFeedback(context, '反馈渠道开发中，敬请期待');
+              } else if (item.title == '评价我们') {
+                showDemoFeedback(context, '评价功能开发中，敬请期待');
+              } else {
+                showDemoFeedback(context, '功能开发中，敬请期待');
+              }
+            },
           ),
           const SizedBox(height: 48),
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
 import 'package:ottersync/components/Common/SectionHeader.dart';
@@ -92,19 +93,31 @@ class _HomeViewState extends State<HomeView> {
                     child: Column(
                       children: [
                         const SizedBox(height: 12),
-                        HomeOverviewCard(
-                          title: _dynamicItems.isEmpty
-                              ? 'No recent work activities found in the last 4 days.'
-                              : '${_dynamicItems.length} recent work activities found in the last 4 days.',
-                          description: _dynamicItems.isEmpty
-                              ? '使用人工智能。验证结果。'
-                              : '使用人工智能。验证结果。',
-                          onCopy: () => showDemoFeedback(context, '摘要内容复制接口已预留。'),
-                          onLike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
-                          onDislike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
-                          onMore: () => setState(() {
-                            _overviewExpanded = !_overviewExpanded;
-                          }),
+                        Builder(
+                          builder: (context) {
+                            final overviewDesc = '使用人工智能。验证结果。';
+                            return HomeOverviewCard(
+                              title: _dynamicItems.isEmpty
+                                  ? 'No recent work activities found in the last 4 days.'
+                                  : '${_dynamicItems.length} recent work activities found in the last 4 days.',
+                              description: overviewDesc,
+                              onCopy: () async {
+                                await Clipboard.setData(
+                                  ClipboardData(text: overviewDesc),
+                                );
+                                if (context.mounted) {
+                                  showDemoFeedback(context, '已复制到剪贴板');
+                                }
+                              },
+                              onLike: () =>
+                                  showDemoFeedback(context, '反馈提交接口已预留。'),
+                              onDislike: () =>
+                                  showDemoFeedback(context, '反馈提交接口已预留。'),
+                              onMore: () => setState(() {
+                                _overviewExpanded = !_overviewExpanded;
+                              }),
+                            );
+                          },
                         ),
                         const SizedBox(height: 18),
                       ],
