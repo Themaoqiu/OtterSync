@@ -1,26 +1,51 @@
 {
   "project_info": {
-    "project_number": "840014416024",
-    "project_id": "ottersync-b4833",
-    "storage_bucket": "ottersync-b4833.firebasestorage.app"
+    "project_number": "785799948599",
+    "project_id": "ottersync-24da2",
+    "storage_bucket": "ottersync-24da2.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:840014416024:android:c044f6a6a5c5907629a8ed",
+        "mobilesdk_app_id": "1:785799948599:android:31ab403a3013f1349d12b2",
         "android_client_info": {
           "package_name": "com.example.ottersync"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "785799948599-8ob989jvc4pahgvjunvnd1tbpjogub8t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ottersync",
+            "certificate_hash": "c160dc381cfd367df532f784f4edd313b877b08e"
+          }
+        },
+        {
+          "client_id": "785799948599-r71tvta2vf5egg357c296r3eq2tgumn6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyDzgVw__jgM4ohvO5191_uWudkqWhEjCcg"
+          "current_key": "AIzaSyBBWndFh9gSIp8MtYxtf7Dgv-baebgUCC0"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "785799948599-r71tvta2vf5egg357c296r3eq2tgumn6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "785799948599-pa33p6ftqme2l703sjg6gq2frn2ioq9e.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.ottersync"
+              }
+            }
+          ]
         }
       }
     }

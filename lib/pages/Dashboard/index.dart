@@ -52,20 +52,47 @@ class _DashboardViewState extends State<DashboardView> {
             const Spacer(),
           ],
         ),
-        const SizedBox(height: 24),
-        Text('仪表板', style: theme.textTheme.headlineMedium),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+        Text('仪表板', style: theme.textTheme.titleLarge),
+        const SizedBox(height: 16),
         AppSurface(
           padding: const EdgeInsets.all(0),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
-            onTap: () => showDemoFeedback(context, '仪表板切换接口已预留。'),
+            onTap: () => showModalBottomSheet(
+              context: context,
+              builder: (ctx) => SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                      title: const Text('默认仪表板'),
+                      leading: Icon(
+                        Icons.dashboard_rounded,
+                        color: palette.primary,
+                      ),
+                      trailing: Icon(
+                        Icons.check_rounded,
+                        color: palette.primary,
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                        '暂无其他仪表板',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
                   Expanded(
-                    child: Text('默认仪表板', style: theme.textTheme.titleLarge),
+                    child: Text('默认仪表板', style: theme.textTheme.titleMedium),
                   ),
                   Container(
                     padding: const EdgeInsets.all(4),
@@ -84,7 +111,7 @@ class _DashboardViewState extends State<DashboardView> {
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         if (_loading)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
@@ -105,7 +132,11 @@ class _DashboardViewState extends State<DashboardView> {
           if (_issues.isNotEmpty)
             AssignedIssuesCard(
               issues: _issues,
-              onIssueTap: (item) => showDemoFeedback(context, '将打开 ${item.key}。'),
+              onIssueTap: (item) {
+                if (item.id != null) {
+                  context.push('/work-item/${item.id}');
+                }
+              },
             ),
           if (_issues.isNotEmpty) const SizedBox(height: 24),
           if (_activities.isNotEmpty)
@@ -117,7 +148,22 @@ class _DashboardViewState extends State<DashboardView> {
         ],
         const SizedBox(height: 24),
         DashboardFeedbackCard(
-          onTap: () => showDemoFeedback(context, '反馈提交接口已预留。'),
+          onTap: () async {
+            try {
+              await _api.submitFeedback(
+                targetType: 'dashboard',
+                targetId: 'widget_request',
+                type: 'like',
+              );
+              if (context.mounted) {
+                showDemoFeedback(context, '感谢您的反馈！');
+              }
+            } catch (e) {
+              if (context.mounted) {
+                showDemoFeedback(context, '反馈提交失败：$e');
+              }
+            }
+          },
         ),
       ],
     );

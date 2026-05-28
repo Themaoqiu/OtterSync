@@ -26,6 +26,7 @@ class QuickAccessItem {
 
 class IssueSummary {
   const IssueSummary({
+    this.id,
     required this.title,
     required this.key,
     this.subtitle,
@@ -41,6 +42,7 @@ class IssueSummary {
     this.dueDate,
   });
 
+  final int? id;
   final String title;
   final String key;
   final String? subtitle;
@@ -111,11 +113,13 @@ class NotificationItem {
     required this.title,
     required this.description,
     this.route,
+    this.workItemId,
   });
 
   final String title;
   final String description;
   final String? route;
+  final int? workItemId;
 }
 
 class FilterItem {

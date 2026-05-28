@@ -23,10 +23,10 @@ class DashboardActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('活动流', style: theme.textTheme.titleLarge),
-          const SizedBox(height: 18),
-          Text('今天', style: theme.textTheme.titleLarge),
-          const SizedBox(height: 18),
+          Text('活动流', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 12),
+          Text('今天', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 12),
           ...activities.asMap().entries.map(
             (entry) => Column(
               children: [
@@ -72,7 +72,7 @@ class DashboardActivityCard extends StatelessWidget {
                                 Icon(
                                   Icons.task_alt_rounded,
                                   color: palette.primary,
-                                  size: 28,
+                                  size: 20,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
@@ -88,9 +88,9 @@ class DashboardActivityCard extends StatelessWidget {
                   ),
                 ),
                 if (entry.key != activities.length - 1) ...[
-                  const SizedBox(height: 18),
-                  Divider(color: palette.divider, indent: 66),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 12),
+                  Divider(color: palette.divider, indent: 50),
+                  const SizedBox(height: 12),
                 ],
               ],
             ),

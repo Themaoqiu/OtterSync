@@ -6,12 +6,18 @@ import 'package:ottersync/pages/BootstrapError/index.dart';
 import 'package:ottersync/pages/CreateWorkItem/index.dart';
 import 'package:ottersync/pages/Dashboard/index.dart';
 import 'package:ottersync/pages/Home/index.dart';
+import 'package:ottersync/pages/Login/index.dart';
 import 'package:ottersync/pages/Main/index.dart';
 import 'package:ottersync/pages/Notifications/index.dart';
+import 'package:ottersync/pages/Register/index.dart';
+import 'package:ottersync/pages/Search/index.dart';
 import 'package:ottersync/pages/SpaceDetails/index.dart';
 import 'package:ottersync/pages/Spaces/index.dart';
+import 'package:ottersync/pages/WorkItemDetail/index.dart';
+import 'package:ottersync/state/auth_controller.dart';
 import 'package:ottersync/state/theme_controller.dart';
 import 'package:ottersync/theme/design_tokens.dart';
+import 'package:ottersync/viewmodels/work_item_api.dart';
 
 ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
   final base = ThemeData(
@@ -250,10 +256,39 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
 }
 
 final ThemeController _themeController = ThemeController();
+final AuthController _authController = AuthController()
+  ..addListener(() {
+    final uid = _authController.user?.uid;
+    if (uid != null) {
+      WorkItemApi.init(uid: uid);
+    } else {
+      WorkItemApi.clear();
+    }
+  });
 
 final GoRouter _rootRouter = GoRouter(
+  refreshListenable: _authController,
   initialLocation: '/home',
+  redirect: (context, state) {
+    final isLoggedIn = _authController.isLoggedIn;
+    final isAuthRoute = state.matchedLocation == '/login' ||
+        state.matchedLocation == '/register';
+    final isBootstrapRoute = state.matchedLocation == '/bootstrap-error';
+
+    if (isBootstrapRoute) return null;
+    if (!isLoggedIn && !isAuthRoute) return '/login';
+    if (isLoggedIn && isAuthRoute) return '/home';
+    return null;
+  },
   routes: [
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginPage(),
+    ),
+    GoRoute(
+      path: '/register',
+      builder: (context, state) => const RegisterPage(),
+    ),
     GoRoute(path: '/', redirect: (context, state) => '/home'),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
@@ -316,6 +351,20 @@ final GoRouter _rootRouter = GoRouter(
       path: '/create-work-item',
       builder: (context, state) => const CreateWorkItemPage(),
     ),
+    GoRoute(
+      path: '/work-item/:workItemId',
+      builder: (context, state) {
+        final id = int.tryParse(state.pathParameters['workItemId'] ?? '');
+        return WorkItemDetailView(workItemId: id);
+      },
+    ),
+    GoRoute(
+      path: '/search',
+      builder: (context, state) {
+        final scope = state.uri.queryParameters['scope'] ?? 'workItems';
+        return SearchView(scope: scope);
+      },
+    ),
   ],
 );
 
@@ -329,19 +378,22 @@ Widget getRootWidget({Object? bootstrapError}) {
     );
   }
 
-  return ThemeControllerScope(
-    notifier: _themeController,
-    child: AnimatedBuilder(
-      animation: _themeController,
-      builder: (context, child) {
-        return MaterialApp.router(
-          debugShowCheckedModeBanner: false,
-          theme: _buildAppTheme(AppColors.light, Brightness.light),
-          darkTheme: _buildAppTheme(AppColors.dark, Brightness.dark),
-          themeMode: _themeController.themeMode,
-          routerConfig: _rootRouter,
-        );
-      },
+  return AuthScope(
+    notifier: _authController,
+    child: ThemeControllerScope(
+      notifier: _themeController,
+      child: AnimatedBuilder(
+        animation: _themeController,
+        builder: (context, child) {
+          return MaterialApp.router(
+            debugShowCheckedModeBanner: false,
+            theme: _buildAppTheme(AppColors.light, Brightness.light),
+            darkTheme: _buildAppTheme(AppColors.dark, Brightness.dark),
+            themeMode: _themeController.themeMode,
+            routerConfig: _rootRouter,
+          );
+        },
+      ),
     ),
   );
 }

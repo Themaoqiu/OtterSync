@@ -13,10 +13,25 @@ class WorkItemApiException implements Exception {
 }
 
 class WorkItemApi {
-  WorkItemApi({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  WorkItemApi({FirebaseFirestore? firestore, String? currentUid})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _currentUid = currentUid ?? _defaultUid;
 
   final FirebaseFirestore _firestore;
+  final String? _currentUid;
+
+  static String? _defaultUid;
+
+  /// Sets the default UID for all WorkItemApi instances.
+  /// Called once after authentication is confirmed.
+  static void init({required String uid}) {
+    _defaultUid = uid;
+  }
+
+  /// Clears the default UID on sign-out.
+  static void clear() {
+    _defaultUid = null;
+  }
 
   static const _metaCollection = '_meta';
   static const _workspacesCollection = 'workspaces';
@@ -25,6 +40,11 @@ class WorkItemApi {
   static const _teamsCollection = 'teams';
   static const _labelsCollection = 'labels';
   static const _workItemsCollection = 'workItems';
+  static const _feedbackCollectionName = 'feedback';
+  CollectionReference get _feedbackCollection =>
+      _firestore.collection(_feedbackCollectionName);
+  CollectionReference get _recentViewsCollection =>
+      _firestore.collection('recentViews');
 
   Future<List<JiraSpace>> listSpaces() async {
     return _guard(() async {
@@ -165,6 +185,113 @@ class WorkItemApi {
     });
   }
 
+  Future<WorkItemResponse?> getWorkItemById(int id) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final doc =
+          await _firestore.collection(_workItemsCollection).doc('$id').get();
+      if (!doc.exists) return null;
+      return WorkItemResponse.fromMap(doc.data() as Map<String, dynamic>);
+    });
+  }
+
+  /// 提交反馈（点赞/踩）
+  Future<void> submitFeedback({
+    required String targetType,
+    required String targetId,
+    required String type,
+    String? comment,
+  }) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final uid = _currentUid;
+      if (uid == null) {
+        throw const WorkItemApiException('请先登录。');
+      }
+
+      // 查询是否已有同类型反馈，有则先取消
+      final existing = await _feedbackCollection
+          .where('userId', isEqualTo: uid)
+          .where('targetType', isEqualTo: targetType)
+          .where('targetId', isEqualTo: targetId)
+          .get();
+
+      for (final doc in existing.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['type'] == type) {
+          // 已有同类型反馈，取消（toggle）
+          await _feedbackCollection.doc(doc.id).delete();
+          return;
+        }
+        // 互斥：先取消相反类型
+        await _feedbackCollection.doc(doc.id).delete();
+      }
+
+      final id = await _nextId('feedback');
+      await _feedbackCollection.doc('$id').set({
+        'id': id,
+        'userId': uid,
+        'targetType': targetType,
+        'targetId': targetId,
+        'type': type,
+        'comment': comment,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  /// 查询当前用户对某目标的反馈状态
+  Future<String?> getFeedbackStatus({
+    required String targetType,
+    required String targetId,
+  }) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final uid = _currentUid;
+      if (uid == null) return null;
+
+      final snapshot = await _feedbackCollection
+          .where('userId', isEqualTo: uid)
+          .where('targetType', isEqualTo: targetType)
+          .where('targetId', isEqualTo: targetId)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) return null;
+      return (snapshot.docs.first.data() as Map<String, dynamic>)['type'] as String?;
+    });
+  }
+
+  /// 更新工作项状态
+  Future<void> updateWorkItemStatus(int id, WorkItemStatus status) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      await _firestore.collection(_workItemsCollection).doc('$id').update({
+        'status': status.name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  /// 记录最近查看
+  Future<void> recordRecentView({
+    required int workItemId,
+    required String workItemKey,
+    required String workItemTitle,
+  }) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final docId = '${_currentUid}_$workItemId';
+      await _recentViewsCollection.doc(docId).set({
+        'userId': _currentUid,
+        'targetId': workItemId,
+        'targetKey': workItemKey,
+        'targetTitle': workItemTitle,
+        'viewedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
   Future<List<IssueSummary>> loadRecentProjects({int limit = 4}) async {
     return _guard(() async {
       await _ensureSeedData();
@@ -232,6 +359,7 @@ class WorkItemApi {
           title: '工作项有新动态',
           description: '$key · $summary',
           route: '/all-work',
+          workItemId: (data['id'] as num?)?.toInt(),
         );
       }).toList(growable: false);
     });
@@ -369,6 +497,7 @@ class WorkItemApi {
               id: (data['id'] as num).toInt(),
               title: data['summary'] as String? ?? '',
               subtitle: data['key'] as String?,
+              status: data['status'] as String?,
             ),
           )
           .where((item) => _matchesQuery(item.title, query) || _matchesQuery(item.subtitle ?? '', query))
@@ -430,6 +559,107 @@ class WorkItemApi {
     });
   }
 
+  /// 搜索工作项（客户端过滤）
+  Future<List<IssueSummary>> searchWorkItems(String query) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      if (query.trim().isEmpty) return [];
+      final maps = await _loadWorkItemMaps();
+      final lowerQuery = query.toLowerCase();
+      final filtered = maps.where((m) {
+        final summary = (m['summary'] as String? ?? '').toLowerCase();
+        final key = (m['key'] as String? ?? '').toLowerCase();
+        final description = (m['description'] as String? ?? '').toLowerCase();
+        return summary.contains(lowerQuery) ||
+            key.contains(lowerQuery) ||
+            description.contains(lowerQuery);
+      }).toList();
+      return filtered.map(_issueSummaryFromWorkItem).toList(growable: false);
+    });
+  }
+
+  /// 搜索空间
+  Future<List<JiraSpace>> searchSpaces(String query) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      if (query.trim().isEmpty) return [];
+      final snapshot = await _firestore.collection(_workspacesCollection).get();
+      final workItemSnapshot = await _firestore.collection(_workItemsCollection).get();
+      final counts = <int, int>{};
+      for (final doc in workItemSnapshot.docs) {
+        final data = doc.data();
+        final workspaceId = (data['workspaceId'] as num?)?.toInt();
+        if (workspaceId != null) {
+          counts.update(workspaceId, (value) => value + 1, ifAbsent: () => 1);
+        }
+      }
+
+      final lowerQuery = query.toLowerCase();
+      return snapshot.docs
+          .map((doc) {
+            final data = doc.data();
+            final id = (data['id'] as num).toInt();
+            return JiraSpace(
+              id: id,
+              name: data['title'] as String? ?? '',
+              key: data['subtitle'] as String? ?? '',
+              template: data['template'] as String? ?? '看板',
+              issueCount: counts[id] ?? 0,
+              avatar: buildSpaceAvatar('${data['subtitle'] ?? ''}${data['title'] ?? ''}'),
+            );
+          })
+          .where((space) =>
+              space.name.toLowerCase().contains(lowerQuery) ||
+              space.key.toLowerCase().contains(lowerQuery))
+          .toList(growable: false);
+    });
+  }
+
+  /// 更新工作区名称
+  Future<void> updateWorkspace(int id, {String? name, String? key}) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final data = <String, dynamic>{};
+      if (name != null) data['title'] = name;
+      if (key != null) data['subtitle'] = key;
+      await _firestore.collection(_workspacesCollection).doc('$id').update(data);
+    });
+  }
+
+  /// 删除工作区（级联删除关联工作项）
+  Future<void> deleteWorkspace(int id) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final workItems = await _firestore
+          .collection(_workItemsCollection)
+          .where('workspaceId', isEqualTo: id)
+          .get();
+      final batch = _firestore.batch();
+      for (final doc in workItems.docs) {
+        batch.delete(doc.reference);
+      }
+      batch.delete(_firestore.collection(_workspacesCollection).doc('$id'));
+      await batch.commit();
+    });
+  }
+
+  /// 创建待办事项（简化版）
+  Future<WorkItemResponse> createBacklogItem({
+    required int workspaceId,
+    required String summary,
+    String? description,
+  }) async {
+    return createWorkItem(WorkItemCreateRequest(
+      workspaceId: workspaceId,
+      workTypeId: 1,
+      summary: summary,
+      reporterId: 1,
+      bucket: WorkItemBucket.backlog,
+      status: WorkItemStatus.todo,
+      description: description,
+    ));
+  }
+
   Future<WorkItemResponse> createWorkItem(WorkItemCreateRequest payload) async {
     return _guard(() async {
       await _ensureSeedData();
@@ -486,6 +716,7 @@ class WorkItemApi {
         'parentId': parent?.id,
         'teamId': team?.id,
         'labelIds': labels.map((item) => item.id).toList(),
+        'createdBy': _currentUid,
         'createdAt': FieldValue.serverTimestamp(),
         'lastViewedAt': FieldValue.serverTimestamp(),
       };
@@ -534,6 +765,7 @@ class WorkItemApi {
         'teams': 1,
         'labels': 0,
         'workItems': 0,
+        'feedback': 0,
       });
       transaction.set(bootstrapRef, {
         'seededAt': FieldValue.serverTimestamp(),
@@ -542,8 +774,12 @@ class WorkItemApi {
       _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 1, title: '任务', subtitle: 'Task'));
       _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 2, title: '缺陷', subtitle: 'Bug'));
       _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 3, title: '故事', subtitle: 'Story'));
-      _seedLookup(transaction, _usersCollection, const LookupOption(id: 1, title: 'User 1', subtitle: 'user1@example.com'));
-      _seedLookup(transaction, _usersCollection, const LookupOption(id: 2, title: 'User 2', subtitle: 'user2@example.com'));
+      if (_currentUid != null) {
+        _seedLookup(transaction, _usersCollection, LookupOption(id: 1, title: _currentUid, subtitle: _currentUid));
+      } else {
+        _seedLookup(transaction, _usersCollection, const LookupOption(id: 1, title: 'User 1', subtitle: 'user1@example.com'));
+        _seedLookup(transaction, _usersCollection, const LookupOption(id: 2, title: 'User 2', subtitle: 'user2@example.com'));
+      }
       _seedLookup(transaction, _teamsCollection, const LookupOption(id: 1, title: 'Default Team', subtitle: 'team-1'));
     });
   }
@@ -718,6 +954,7 @@ class WorkItemApi {
     final status = _statusFromData(data);
     final bucket = _bucketFromData(data);
     return IssueSummary(
+      id: (data['id'] as num?)?.toInt(),
       title: data['summary'] as String? ?? '',
       key: data['key'] as String? ?? '',
       subtitle: workspace['title'] as String?,

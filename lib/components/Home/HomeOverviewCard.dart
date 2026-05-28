@@ -11,6 +11,8 @@ class HomeOverviewCard extends StatelessWidget {
     required this.onLike,
     required this.onDislike,
     required this.onMore,
+    this.isLiked = false,
+    this.isDisliked = false,
   });
 
   final String title;
@@ -19,6 +21,8 @@ class HomeOverviewCard extends StatelessWidget {
   final VoidCallback onLike;
   final VoidCallback onDislike;
   final VoidCallback onMore;
+  final bool isLiked;
+  final bool isDisliked;
 
   @override
   Widget build(BuildContext context) {
@@ -79,32 +83,47 @@ class HomeOverviewCard extends StatelessWidget {
                   ),
                 ),
               ),
-              IconButton(
-                onPressed: onCopy,
-                icon: Icon(
-                  Icons.content_copy_outlined,
-                  color: palette.textPrimary,
-                ),
-                iconSize: 20,
-                visualDensity: VisualDensity.compact,
-              ),
-              IconButton(
-                onPressed: onLike,
-                icon: Icon(
-                  Icons.thumb_up_alt_outlined,
-                  color: palette.textPrimary,
-                ),
-                iconSize: 20,
-                visualDensity: VisualDensity.compact,
-              ),
-              IconButton(
-                onPressed: onDislike,
-                icon: Icon(
-                  Icons.thumb_down_alt_outlined,
-                  color: palette.textPrimary,
-                ),
-                iconSize: 20,
-                visualDensity: VisualDensity.compact,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: onCopy,
+                    icon: Icon(
+                      Icons.content_copy_outlined,
+                      color: palette.textPrimary,
+                    ),
+                    iconSize: 20,
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(4),
+                  ),
+                  IconButton(
+                    onPressed: onLike,
+                    icon: Icon(
+                      isLiked
+                          ? Icons.thumb_up_alt
+                          : Icons.thumb_up_alt_outlined,
+                      color: isLiked ? palette.primary : palette.textPrimary,
+                    ),
+                    iconSize: 20,
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(4),
+                  ),
+                  IconButton(
+                    onPressed: onDislike,
+                    icon: Icon(
+                      isDisliked
+                          ? Icons.thumb_down_alt
+                          : Icons.thumb_down_alt_outlined,
+                      color: isDisliked ? palette.primary : palette.textPrimary,
+                    ),
+                    iconSize: 20,
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(4),
+                  ),
+                ],
               ),
             ],
           ),

@@ -32,7 +32,7 @@ class AllWorkToolbar extends StatelessWidget {
             onTap: onFilterTap,
             borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
             child: Container(
-              height: 60,
+              height: 48,
               decoration: BoxDecoration(
                 color: palette.surface,
                 borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
@@ -45,24 +45,24 @@ class AllWorkToolbar extends StatelessWidget {
                 children: [
                   const SizedBox(width: 12),
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
                       color: palette.primarySoft,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Icon(
                       selectedFilter.icon,
                       color: palette.primary,
-                      size: 18,
+                      size: 16,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       selectedFilter.title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -116,8 +116,8 @@ class _ViewModeButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
       child: Container(
-        width: 60,
-        height: 60,
+        width: 48,
+        height: 48,
         decoration: BoxDecoration(
           color: selected ? palette.primarySoft : palette.surface,
           borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
@@ -129,7 +129,7 @@ class _ViewModeButton extends StatelessWidget {
         child: Icon(
           icon,
           color: selected ? palette.primary : palette.textSecondary,
-          size: 24,
+          size: 20,
         ),
       ),
     );

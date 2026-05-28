@@ -12,6 +12,7 @@ class IssueListTile extends StatelessWidget {
     this.avatar,
     this.trailing,
     this.compact = false,
+    this.onTap,
   });
 
   final String title;
@@ -21,6 +22,7 @@ class IssueListTile extends StatelessWidget {
   final String? avatar;
   final Widget? trailing;
   final bool compact;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +40,7 @@ class IssueListTile extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
-          onTap: () {}, // Adds ripple effect
+          onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(

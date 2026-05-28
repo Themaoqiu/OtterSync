@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
 import 'package:ottersync/components/Common/SectionHeader.dart';
@@ -32,6 +33,8 @@ class _HomeViewState extends State<HomeView> {
   List<QuickAccessItem> _quickAccessItems = const [];
   List<IssueSummary> _viewedItems = const [];
   List<IssueSummary> _dynamicItems = const [];
+  bool _isLiked = false;
+  bool _isDisliked = false;
 
   @override
   void initState() {
@@ -45,45 +48,41 @@ class _HomeViewState extends State<HomeView> {
     final palette = AppThemePalette.of(context);
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: palette.scaffold,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-              child: Column(
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+          child: Column(
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      InkWell(
-                        onTap: () => context.push('/account'),
-                        borderRadius: BorderRadius.circular(999),
-                        child: const UserAvatar(label: 'MT'),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: const SizedBox.shrink(),
-                      ),
-                      IconButton(
-                        onPressed: () => context.push('/create-work-item'),
-                        icon: Icon(
-                          Icons.add_rounded,
-                          color: palette.primary,
-                          size: 30,
-                        ),
-                        tooltip: '创建工作项目',
-                      ),
-                    ],
+                  InkWell(
+                    onTap: () => context.push('/account'),
+                    borderRadius: BorderRadius.circular(999),
+                    child: const UserAvatar(label: 'MT'),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: SizedBox.shrink(),
+                  ),
+                  IconButton(
+                    onPressed: () => context.push('/create-work-item'),
+                    icon: Icon(
+                      Icons.add_rounded,
+                      color: palette.primary,
+                      size: 30,
+                    ),
+                    tooltip: '创建工作项目',
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
-                children: [
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
+            children: [
                   SectionHeader(
                     title: '今日概述',
                     expanded: _overviewExpanded,
@@ -96,19 +95,31 @@ class _HomeViewState extends State<HomeView> {
                     child: Column(
                       children: [
                         const SizedBox(height: 12),
-                        HomeOverviewCard(
-                          title: _dynamicItems.isEmpty
-                              ? 'No recent work activities found in the last 4 days.'
-                              : '${_dynamicItems.length} recent work activities found in the last 4 days.',
-                          description: _dynamicItems.isEmpty
-                              ? '使用人工智能。验证结果。'
-                              : '使用人工智能。验证结果。',
-                          onCopy: () => showDemoFeedback(context, '摘要内容复制接口已预留。'),
-                          onLike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
-                          onDislike: () => showDemoFeedback(context, '反馈提交接口已预留。'),
-                          onMore: () => setState(() {
-                            _overviewExpanded = !_overviewExpanded;
-                          }),
+                        Builder(
+                          builder: (context) {
+                            final overviewDesc = '使用人工智能。验证结果。';
+                            return HomeOverviewCard(
+                              title: _dynamicItems.isEmpty
+                                  ? 'No recent work activities found in the last 4 days.'
+                                  : '${_dynamicItems.length} recent work activities found in the last 4 days.',
+                              description: overviewDesc,
+                              isLiked: _isLiked,
+                              isDisliked: _isDisliked,
+                              onCopy: () async {
+                                await Clipboard.setData(
+                                  ClipboardData(text: overviewDesc),
+                                );
+                                if (context.mounted) {
+                                  showDemoFeedback(context, '已复制到剪贴板');
+                                }
+                              },
+                              onLike: () => _submitFeedback('like'),
+                              onDislike: () => _submitFeedback('dislike'),
+                              onMore: () => setState(() {
+                                _overviewExpanded = !_overviewExpanded;
+                              }),
+                            );
+                          },
                         ),
                         const SizedBox(height: 18),
                       ],
@@ -211,8 +222,11 @@ class _HomeViewState extends State<HomeView> {
                     else
                       RecentProjectsCard(
                         items: _buildViewedDisplayItems().take(2).toList(growable: false),
-                        onItemTap: (item) =>
-                            showDemoFeedback(context, '将打开 ${item.key} 的详情页。'),
+                        onItemTap: (item) {
+                          if (item.id != null) {
+                            context.push('/work-item/${item.id}');
+                          }
+                        },
                       ),
                     const SizedBox(height: 18),
                     Text(
@@ -225,8 +239,11 @@ class _HomeViewState extends State<HomeView> {
                     if (_viewedItems.length > 2)
                       RecentProjectsCard(
                         items: _buildViewedDisplayItems().skip(2).take(4).toList(growable: false),
-                        onItemTap: (item) =>
-                            showDemoFeedback(context, '将打开 ${item.key} 的详情页。'),
+                        onItemTap: (item) {
+                          if (item.id != null) {
+                            context.push('/work-item/${item.id}');
+                          }
+                        },
                       ),
                   ] else ...[
                     const SizedBox(height: 18),
@@ -249,17 +266,18 @@ class _HomeViewState extends State<HomeView> {
                     else
                       RecentProjectsCard(
                         items: _dynamicItems,
-                        onItemTap: (item) =>
-                            showDemoFeedback(context, '将打开 ${item.key} 的详情页。'),
+                        onItemTap: (item) {
+                          if (item.id != null) {
+                            context.push('/work-item/${item.id}');
+                          }
+                        },
                       ),
                   ],
                 ],
               ),
             ),
           ],
-        ),
-      ),
-    );
+        );
   }
 
   Widget _buildErrorState() {
@@ -281,6 +299,10 @@ class _HomeViewState extends State<HomeView> {
       final quickAccess = await _api.loadHomeQuickAccess();
       final viewedItems = await _api.loadViewedItems();
       final dynamicItems = await _api.loadRecentDynamicItems();
+      final feedbackStatus = await _api.getFeedbackStatus(
+        targetType: 'overview',
+        targetId: 'daily',
+      );
       if (!mounted) {
         return;
       }
@@ -288,6 +310,8 @@ class _HomeViewState extends State<HomeView> {
         _quickAccessItems = quickAccess;
         _viewedItems = viewedItems;
         _dynamicItems = dynamicItems;
+        _isLiked = feedbackStatus == 'like';
+        _isDisliked = feedbackStatus == 'dislike';
         _loading = false;
       });
     } catch (error) {
@@ -298,6 +322,29 @@ class _HomeViewState extends State<HomeView> {
         _error = '$error';
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _submitFeedback(String type) async {
+    try {
+      await _api.submitFeedback(
+        targetType: 'overview',
+        targetId: 'daily',
+        type: type,
+      );
+      if (!mounted) return;
+      final status = await _api.getFeedbackStatus(
+        targetType: 'overview',
+        targetId: 'daily',
+      );
+      if (!mounted) return;
+      setState(() {
+        _isLiked = status == 'like';
+        _isDisliked = status == 'dislike';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      showDemoFeedback(context, '反馈提交失败：$e');
     }
   }
 
@@ -344,6 +391,7 @@ class _HomeViewState extends State<HomeView> {
       ),
       ..._viewedItems.map(
         (item) => IssueSummary(
+          id: item.id,
           title: item.title,
           key: item.key,
           subtitle: item.subtitle == null

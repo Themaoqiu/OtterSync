@@ -4,7 +4,6 @@ import 'package:ottersync/components/Common/AppSurface.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
 import 'package:ottersync/components/Common/SectionHeader.dart';
 import 'package:ottersync/components/Common/UserAvatar.dart';
-import 'package:ottersync/components/Common/demo_feedback.dart';
 import 'package:ottersync/components/Spaces/CreateSpaceDialog.dart';
 import 'package:ottersync/components/Spaces/SpaceCard.dart';
 import 'package:ottersync/theme/design_tokens.dart';
@@ -58,7 +57,7 @@ class _SpacesViewState extends State<SpacesView> {
                       ),
                       const Spacer(),
                       IconButton(
-                        onPressed: () => showDemoFeedback(context, '搜索空间接口已预留。'),
+                        onPressed: () => context.push('/search?scope=spaces'),
                         icon: Icon(
                           Icons.search_rounded,
                           color: palette.textSecondary,
