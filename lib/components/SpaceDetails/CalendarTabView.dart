@@ -1,36 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
-import 'package:ottersync/components/Common/CustomFilterChip.dart';
 import 'package:ottersync/components/Common/IssueListTile.dart';
+import 'package:ottersync/components/Common/SheetHeader.dart';
+import 'package:ottersync/components/Common/work_type_icon.dart';
+import 'package:ottersync/components/SpaceDetails/SpaceCalendarPanel.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
+import 'package:table_calendar/table_calendar.dart';
+
+enum _CalendarFilterKind { workType, status, assignee, priority }
 
 class CalendarTabView extends StatefulWidget {
   const CalendarTabView({
     super.key,
-    required this.filters,
     required this.items,
+    required this.onItemTap,
+    required this.onScheduleItem,
   });
 
-  final List<String> filters;
   final List<IssueSummary> items;
+  final void Function(IssueSummary item) onItemTap;
+  final Future<void> Function(IssueSummary item, DateTime date)
+      onScheduleItem;
 
   @override
   State<CalendarTabView> createState() => _CalendarTabViewState();
 }
 
 class _CalendarTabViewState extends State<CalendarTabView> {
-  int _selectedFilter = 0;
-  int _selectedDay = 14;
+  late DateTime _focusedDay;
+  late DateTime _selectedDay;
+  String? _typeFilter;
+  WorkItemStatus? _statusFilter;
+  String? _assigneeFilter;
+  String? _priorityFilter;
 
-  static const _days = [
-    ['29', '30', '31', '1', '2', '3', '4'],
-    ['5', '6', '7', '8', '9', '10', '11'],
-    ['12', '13', '14', '15', '16', '17', '18'],
-    ['19', '20', '21', '22', '23', '24', '25'],
-    ['26', '27', '28', '29', '30', '1', '2'],
-    ['3', '4', '5', '6', '7', '8', '9'],
-  ];
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _focusedDay = DateTime(now.year, now.month, now.day);
+    _selectedDay = _focusedDay;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,59 +51,113 @@ class _CalendarTabViewState extends State<CalendarTabView> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: widget.filters.asMap().entries.map((entry) {
-              return Padding(
-                padding: EdgeInsets.only(
-                  right: entry.key == widget.filters.length - 1 ? 0 : 10,
-                ),
-                child: CustomFilterChip(
-                  label: entry.value,
-                  selected: entry.key == _selectedFilter,
-                  onTap: () => setState(() => _selectedFilter = entry.key),
-                ),
-              );
-            }).toList(),
+            children: [
+              _filterChip(
+                _CalendarFilterKind.workType,
+                _typeFilter ?? '类型',
+                _typeFilter != null,
+              ),
+              const SizedBox(width: 8),
+              _filterChip(
+                _CalendarFilterKind.status,
+                _statusFilter == null ? '状态' : workItemStatusLabel(_statusFilter!),
+                _statusFilter != null,
+              ),
+              const SizedBox(width: 8),
+              _filterChip(
+                _CalendarFilterKind.assignee,
+                _assigneeFilter ?? '经办人',
+                _assigneeFilter != null,
+              ),
+              const SizedBox(width: 8),
+              _filterChip(
+                _CalendarFilterKind.priority,
+                _priorityFilter ?? '优先级',
+                _priorityFilter != null,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
         AppSurface(
-          child: _CalendarCard(selectedDay: _selectedDay, onDayTap: _onDayTap),
-        ),
-        const SizedBox(height: 18),
-        if (_scheduledItems.isEmpty)
-          AppSurface(child: _CalendarEmptyState(selectedDay: _selectedDay))
-        else
-          AppSurface(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _scheduledItems
-                  .map(
-                    (item) => IssueListTile(
-                      title: item.title,
-                      subtitle: '${item.key} · ${item.subtitle ?? ''}',
-                      status: item.status,
-                      avatar: item.assigneeInitials,
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
+          child: SpaceCalendarPanel(
+            focusedDay: _focusedDay,
+            selectedDay: _selectedDay,
+            onDaySelected: (selected, focused) {
+              setState(() {
+                _selectedDay = selected;
+                _focusedDay = focused;
+              });
+            },
+            onPageChanged: (focused) => setState(() => _focusedDay = focused),
+            items: _filteredItems,
           ),
+        ),
         const SizedBox(height: 18),
         AppSurface(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('未安排 (${_unscheduledItems.length})', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 12),
+              Text(
+                '${_selectedDay.month} 月 ${_selectedDay.day} 日 (${_scheduledItems.length})',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 10),
+              if (_scheduledItems.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Text(
+                      '当天没有到期工作项',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                )
+              else
+                ..._scheduledItems.map(
+                  (item) => InkWell(
+                    onTap: () => widget.onItemTap(item),
+                    child: IssueListTile(
+                      title: item.title,
+                      subtitle: '${item.key} · ${item.subtitle ?? ''}',
+                      status: item.status,
+                      avatar: item.assigneeInitials,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        AppSurface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '未安排 (${_unscheduledItems.length})',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '点击工作项可安排到选定日期',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 10),
               if (_unscheduledItems.isEmpty)
-                Text('所有工作项都已安排到日历中。', style: Theme.of(context).textTheme.bodyMedium)
+                Text(
+                  '所有工作项都已安排到日历中。',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                )
               else
                 ..._unscheduledItems.map(
-                  (item) => IssueListTile(
-                    title: item.title,
-                    subtitle: '${item.key} · ${item.subtitle ?? ''}',
-                    status: item.status,
-                    avatar: item.assigneeInitials,
+                  (item) => InkWell(
+                    onTap: () => _scheduleTo(item),
+                    child: IssueListTile(
+                      title: item.title,
+                      subtitle: '${item.key} · 点击安排到 ${_selectedDay.month}/${_selectedDay.day}',
+                      status: item.status,
+                      avatar: item.assigneeInitials,
+                    ),
                   ),
                 ),
             ],
@@ -102,147 +167,201 @@ class _CalendarTabViewState extends State<CalendarTabView> {
     );
   }
 
-  List<IssueSummary> get _scheduledItems {
-    return widget.items.where((item) => item.dueDate?.day == _selectedDay).toList(growable: false);
+  Future<void> _scheduleTo(IssueSummary item) async {
+    await widget.onScheduleItem(item, _selectedDay);
   }
 
-  List<IssueSummary> get _unscheduledItems {
-    return widget.items.where((item) => item.dueDate == null).toList(growable: false);
-  }
-
-  void _onDayTap(String day) {
-    final parsed = int.tryParse(day);
-    if (parsed == null) {
-      return;
-    }
-    setState(() => _selectedDay = parsed);
-  }
-}
-
-class _CalendarCard extends StatelessWidget {
-  const _CalendarCard({required this.selectedDay, required this.onDayTap});
-
-  final int selectedDay;
-  final ValueChanged<String> onDayTap;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _filterChip(_CalendarFilterKind kind, String label, bool active) {
     final palette = AppThemePalette.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    return InkWell(
+      onTap: () => _openFilterMenu(kind),
+      borderRadius: BorderRadius.circular(AppSpace.radius),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: active ? palette.primarySoft : palette.surface,
+          borderRadius: BorderRadius.circular(AppSpace.radius),
+          border: Border.all(
+            color: active ? palette.primary : palette.border,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text('四月 2026', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(width: 4),
-            Icon(Icons.arrow_drop_down_rounded, color: palette.textSecondary),
-            const Spacer(),
             Text(
-              '今天',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: palette.primary,
-                  ),
+              label,
+              style: TextStyle(
+                color: active ? palette.primary : palette.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-            const SizedBox(width: 22),
+            const SizedBox(width: 6),
             Icon(
-              Icons.chevron_left_rounded,
-              color: palette.textPrimary,
-              size: 38,
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: palette.textPrimary,
-              size: 38,
+              Icons.keyboard_arrow_down_rounded,
+              size: 18,
+              color: active ? palette.primary : palette.textSecondary,
             ),
           ],
         ),
-        const SizedBox(height: 18),
-        Row(
-          children: const ['日', '一', '二', '三', '四', '五', '六']
-              .map(
-                (day) => Expanded(
-                  child: Center(
-                    child: Text(day),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-        const SizedBox(height: 12),
-        ..._CalendarTabViewState._days.map(
-          (week) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: week
-                  .map(
-                    (day) => Expanded(
-                      child: Center(
-                        child: InkWell(
-                          onTap: () => onDayTap(day),
-                          customBorder: const CircleBorder(),
-                          child: Container(
-                            width: 54,
-                            height: 54,
-                            decoration: BoxDecoration(
-                              color: int.tryParse(day) == selectedDay
-                                  ? palette.primary
-                                  : Colors.transparent,
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              day,
-                              style: TextStyle(
-                                color: int.tryParse(day) == selectedDay
-                                    ? Colors.white
-                                    : palette.textPrimary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
-}
 
-class _CalendarEmptyState extends StatelessWidget {
-  const _CalendarEmptyState({required this.selectedDay});
-
-  final int selectedDay;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: 6),
-        Container(
-          width: 140,
-          height: 140,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Color(0xFFE7E9EF),
-          ),
-          child: const Icon(
-            Icons.task_alt_rounded,
-            size: 86,
-            color: Color(0xFF1F5DBD),
-          ),
+  Future<void> _openFilterMenu(_CalendarFilterKind kind) async {
+    final options = _filterOptions(kind);
+    final picked = await showModalBottomSheet<String?>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            SheetHeader(title: _filterTitle(kind)),
+            ListTile(
+              leading: const Icon(Icons.all_inclusive_rounded,
+                  color: Color(0xFF44546F)),
+              title: const Text('全部'),
+              onTap: () => Navigator.pop(ctx, ''),
+            ),
+            ...options.map(
+              (o) => ListTile(
+                leading: _filterLeading(kind, o),
+                title: Text(o),
+                onTap: () => Navigator.pop(ctx, o),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 20),
-        Text('尚未安排任何事项', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 14),
-        Text(
-          '$selectedDay 日无任何到期工作项',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-      ],
+      ),
     );
+    if (picked == null) return;
+    setState(() {
+      final value = picked.isEmpty ? null : picked;
+      switch (kind) {
+        case _CalendarFilterKind.workType:
+          _typeFilter = value;
+          break;
+        case _CalendarFilterKind.status:
+          _statusFilter = value == null
+              ? null
+              : WorkItemStatus.values.firstWhere(
+                  (s) => workItemStatusLabel(s) == value,
+                  orElse: () => WorkItemStatus.todo,
+                );
+          break;
+        case _CalendarFilterKind.assignee:
+          _assigneeFilter = value;
+          break;
+        case _CalendarFilterKind.priority:
+          _priorityFilter = value;
+          break;
+      }
+    });
+  }
+
+  Widget _filterLeading(_CalendarFilterKind kind, String value) {
+    switch (kind) {
+      case _CalendarFilterKind.workType:
+        return WorkTypeIconBadge(title: value, size: 24);
+      case _CalendarFilterKind.status:
+        if (value == workItemStatusLabel(WorkItemStatus.done)) {
+          return const Icon(Icons.check_circle_rounded,
+              color: Color(0xFF1F8B4C));
+        }
+        if (value == workItemStatusLabel(WorkItemStatus.inProgress)) {
+          return const Icon(Icons.timelapse_rounded,
+              color: Color(0xFF1F5DBD));
+        }
+        return const Icon(Icons.radio_button_unchecked_rounded,
+            color: Color(0xFF44546F));
+      case _CalendarFilterKind.assignee:
+        return const Icon(Icons.person_rounded, color: Color(0xFF1F5DBD));
+      case _CalendarFilterKind.priority:
+        switch (value) {
+          case 'Highest':
+            return const Icon(Icons.keyboard_double_arrow_up_rounded,
+                color: Color(0xFFE5493A));
+          case 'High':
+            return const Icon(Icons.keyboard_arrow_up_rounded,
+                color: Color(0xFFFF8B6B));
+          case 'Medium':
+            return const Icon(Icons.drag_handle_rounded,
+                color: Color(0xFFFF8B00));
+          case 'Low':
+            return const Icon(Icons.keyboard_arrow_down_rounded,
+                color: Color(0xFF6CA6FF));
+          case 'Lowest':
+            return const Icon(Icons.keyboard_double_arrow_down_rounded,
+                color: Color(0xFF4C84FF));
+        }
+        return const Icon(Icons.flag_rounded, color: Color(0xFF44546F));
+    }
+  }
+
+  String _filterTitle(_CalendarFilterKind kind) {
+    switch (kind) {
+      case _CalendarFilterKind.workType:
+        return '按类型筛选';
+      case _CalendarFilterKind.status:
+        return '按状态筛选';
+      case _CalendarFilterKind.assignee:
+        return '按经办人筛选';
+      case _CalendarFilterKind.priority:
+        return '按优先级筛选';
+    }
+  }
+
+  List<String> _filterOptions(_CalendarFilterKind kind) {
+    switch (kind) {
+      case _CalendarFilterKind.workType:
+        final set = widget.items
+            .map((i) => i.workTypeTitle)
+            .whereType<String>()
+            .toSet()
+            .toList()
+          ..sort();
+        return set.isEmpty ? const ['任务', '缺陷', '故事'] : set;
+      case _CalendarFilterKind.status:
+        return WorkItemStatus.values.map(workItemStatusLabel).toList();
+      case _CalendarFilterKind.assignee:
+        return widget.items
+            .map((i) => i.assigneeInitials)
+            .whereType<String>()
+            .toSet()
+            .toList()
+          ..sort();
+      case _CalendarFilterKind.priority:
+        return const ['Highest', 'High', 'Medium', 'Low', 'Lowest'];
+    }
+  }
+
+  bool _passesFilters(IssueSummary item) {
+    if (_typeFilter != null && item.workTypeTitle != _typeFilter) return false;
+    if (_statusFilter != null && item.statusKey != _statusFilter) return false;
+    if (_assigneeFilter != null && item.assigneeInitials != _assigneeFilter) {
+      return false;
+    }
+    if (_priorityFilter != null && item.priority != _priorityFilter) {
+      return false;
+    }
+    return true;
+  }
+
+  List<IssueSummary> get _filteredItems =>
+      widget.items.where(_passesFilters).toList(growable: false);
+
+  List<IssueSummary> get _scheduledItems {
+    return _filteredItems
+        .where(
+          (item) =>
+              item.dueDate != null && isSameDay(item.dueDate!, _selectedDay),
+        )
+        .toList(growable: false);
+  }
+
+  List<IssueSummary> get _unscheduledItems {
+    return _filteredItems
+        .where((item) => item.dueDate == null)
+        .toList(growable: false);
   }
 }

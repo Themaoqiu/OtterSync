@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ottersync/state/shell_scope.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 
 class MainPage extends StatelessWidget {
@@ -28,7 +29,10 @@ class MainPage extends StatelessWidget {
     final palette = AppThemePalette.of(context);
 
     return Scaffold(
-      body: SafeArea(bottom: false, child: navigationShell),
+      body: SafeArea(
+        bottom: false,
+        child: MainShellScope(shell: navigationShell, child: navigationShell),
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: palette.surface,

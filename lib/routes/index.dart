@@ -17,6 +17,7 @@ import 'package:ottersync/pages/WorkItemDetail/index.dart';
 import 'package:ottersync/state/auth_controller.dart';
 import 'package:ottersync/state/theme_controller.dart';
 import 'package:ottersync/theme/design_tokens.dart';
+import 'package:ottersync/viewmodels/jira_models.dart';
 import 'package:ottersync/viewmodels/work_item_api.dart';
 
 ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
@@ -228,7 +229,7 @@ ThemeData _buildAppTheme(AppPalette palette, Brightness brightness) {
       iconColor: palette.textSecondary,
       textColor: palette.textPrimary,
       tileColor: Colors.transparent,
-      contentPadding: EdgeInsets.zero,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
     ),
     datePickerTheme: DatePickerThemeData(
       backgroundColor: palette.surface,
@@ -355,7 +356,11 @@ final GoRouter _rootRouter = GoRouter(
       path: '/work-item/:workItemId',
       builder: (context, state) {
         final id = int.tryParse(state.pathParameters['workItemId'] ?? '');
-        return WorkItemDetailView(workItemId: id);
+        final extra = state.extra;
+        return WorkItemDetailView(
+          workItemId: id,
+          heroSeed: extra is IssueSummary ? extra : null,
+        );
       },
     ),
     GoRoute(

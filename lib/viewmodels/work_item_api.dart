@@ -40,6 +40,7 @@ class WorkItemApi {
   static const _teamsCollection = 'teams';
   static const _labelsCollection = 'labels';
   static const _workItemsCollection = 'workItems';
+  static const _sprintsCollection = 'sprints';
   static const _feedbackCollectionName = 'feedback';
   CollectionReference get _feedbackCollection =>
       _firestore.collection(_feedbackCollectionName);
@@ -262,6 +263,92 @@ class WorkItemApi {
     });
   }
 
+  /// 更新工作项任意字段（仅传入需要更新的）
+  Future<void> updateWorkItemFields(
+    int id, {
+    String? summary,
+    String? description,
+    DateTime? startDate,
+    DateTime? dueDate,
+    bool clearStartDate = false,
+    bool clearDueDate = false,
+    int? assigneeId,
+    bool clearAssignee = false,
+    int? teamId,
+    bool clearTeam = false,
+    int? sprintId,
+    bool clearSprint = false,
+    String? priority,
+    bool clearPriority = false,
+    int? parentId,
+    bool clearParent = false,
+  }) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final patch = <String, dynamic>{};
+      if (summary != null) patch['summary'] = summary;
+      if (description != null) patch['description'] = description;
+      if (startDate != null) patch['startDate'] = startDate;
+      if (clearStartDate) patch['startDate'] = null;
+      if (dueDate != null) patch['dueDate'] = dueDate;
+      if (clearDueDate) patch['dueDate'] = null;
+      if (assigneeId != null) {
+        final lookup =
+            await _loadLookupById(_usersCollection, assigneeId, 'assignee');
+        patch['assigneeId'] = assigneeId;
+        patch['assignee'] = lookup.toMap();
+      } else if (clearAssignee) {
+        patch['assigneeId'] = null;
+        patch['assignee'] = null;
+      }
+      if (teamId != null) {
+        final lookup = await _loadLookupById(_teamsCollection, teamId, 'team');
+        patch['teamId'] = teamId;
+        patch['team'] = lookup.toMap();
+      } else if (clearTeam) {
+        patch['teamId'] = null;
+        patch['team'] = null;
+      }
+      if (sprintId != null) {
+        final sprint = await getSprintById(sprintId);
+        if (sprint == null) {
+          throw const WorkItemApiException('找不到对应的冲刺。');
+        }
+        patch['sprintId'] = sprintId;
+        patch['sprint'] = sprint.toLookup().toMap();
+        patch['bucket'] = WorkItemBucket.sprint.name;
+      } else if (clearSprint) {
+        patch['sprintId'] = null;
+        patch['sprint'] = null;
+        patch['bucket'] = WorkItemBucket.backlog.name;
+      }
+      if (priority != null) patch['priority'] = priority;
+      if (clearPriority) patch['priority'] = null;
+      if (parentId != null) {
+        final parent = await _loadOptionalParentItem(parentId);
+        patch['parentId'] = parentId;
+        patch['parent'] = parent?.toMap();
+      } else if (clearParent) {
+        patch['parentId'] = null;
+        patch['parent'] = null;
+      }
+      patch['updatedAt'] = FieldValue.serverTimestamp();
+      if (patch.length == 1) return; // only updatedAt
+      await _firestore.collection(_workItemsCollection).doc('$id').update(patch);
+    });
+  }
+
+  /// 更新工作项截止日期（dueDate=null 表示清除）
+  Future<void> updateWorkItemDueDate(int id, DateTime? dueDate) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      await _firestore.collection(_workItemsCollection).doc('$id').update({
+        'dueDate': dueDate,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
   /// 更新工作项状态
   Future<void> updateWorkItemStatus(int id, WorkItemStatus status) async {
     return _guard(() async {
@@ -289,6 +376,10 @@ class WorkItemApi {
         'targetTitle': workItemTitle,
         'viewedAt': FieldValue.serverTimestamp(),
       });
+      await _firestore
+          .collection(_workItemsCollection)
+          .doc('$workItemId')
+          .update({'lastViewedAt': FieldValue.serverTimestamp()});
     });
   }
 
@@ -413,64 +504,171 @@ class WorkItemApi {
     });
   }
 
-  Future<List<BacklogGroup>> loadBacklogGroups(int workspaceId) async {
+  Future<List<Sprint>> listSprints({int? workspaceId}) async {
     return _guard(() async {
       await _ensureSeedData();
-      final workspace = await getWorkspaceById(workspaceId);
-      final items = await _loadWorkItemMaps(workspaceId: workspaceId);
-      final backlogItems = items
-          .where((data) => _bucketFromData(data) == WorkItemBucket.backlog)
-          .map(_issueSummaryFromWorkItem)
+      final snapshot = await _firestore
+          .collection(_sprintsCollection)
+          .orderBy('id')
+          .get();
+      return snapshot.docs
+          .map((doc) => Sprint.fromMap(Map<String, dynamic>.from(doc.data())))
+          .where((sprint) =>
+              workspaceId == null || sprint.workspaceId == workspaceId)
           .toList(growable: false);
-      final sprintItems = items
-          .where((data) => _bucketFromData(data) == WorkItemBucket.sprint)
-          .map(_issueSummaryFromWorkItem)
-          .toList(growable: false);
-      final title = workspace == null
-          ? '待办事项列表'
-          : '${workspace.key} 待办事项列表';
-
-      return [
-        BacklogGroup(
-          title: '$title · 普通待办',
-          issueCount: backlogItems.length,
-          todoCount: backlogItems.where((item) => item.statusKey == WorkItemStatus.todo).length,
-          inProgressCount: backlogItems
-              .where((item) => item.statusKey == WorkItemStatus.inProgress)
-              .length,
-          doneCount: backlogItems.where((item) => item.statusKey == WorkItemStatus.done).length,
-          items: backlogItems,
-        ),
-        BacklogGroup(
-          title: '$title · 冲刺工作',
-          issueCount: sprintItems.length,
-          todoCount: sprintItems.where((item) => item.statusKey == WorkItemStatus.todo).length,
-          inProgressCount: sprintItems
-              .where((item) => item.statusKey == WorkItemStatus.inProgress)
-              .length,
-          doneCount: sprintItems.where((item) => item.statusKey == WorkItemStatus.done).length,
-          items: sprintItems,
-        ),
-      ].where((group) => group.issueCount > 0).toList(growable: false);
     });
   }
 
-  Future<int> loadBoardItemCount(int workspaceId) async {
+  Future<Sprint?> getSprintById(int id) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final snapshot =
+          await _firestore.collection(_sprintsCollection).doc('$id').get();
+      if (!snapshot.exists || snapshot.data() == null) {
+        return null;
+      }
+      return Sprint.fromMap(Map<String, dynamic>.from(snapshot.data()!));
+    });
+  }
+
+  Future<Sprint> createSprint(SprintCreateRequest payload) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final name = payload.name.trim();
+      if (name.isEmpty) {
+        throw const WorkItemApiException('请输入冲刺名称。');
+      }
+      await _loadLookupById(_workspacesCollection, payload.workspaceId, 'workspace');
+      final id = await _nextId('sprints');
+      final sprint = Sprint(
+        id: id,
+        workspaceId: payload.workspaceId,
+        name: name,
+        goal: payload.goal?.trim().isEmpty ?? true ? null : payload.goal!.trim(),
+        status: SprintStatus.planned,
+        startDate: payload.startDate,
+        endDate: payload.endDate,
+      );
+      await _firestore
+          .collection(_sprintsCollection)
+          .doc('$id')
+          .set(sprint.toMap());
+      return sprint;
+    });
+  }
+
+  Future<Sprint> updateSprintStatus(int id, SprintStatus status) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final docRef = _firestore.collection(_sprintsCollection).doc('$id');
+      final snapshot = await docRef.get();
+      if (!snapshot.exists || snapshot.data() == null) {
+        throw const WorkItemApiException('冲刺不存在。');
+      }
+      final patch = <String, dynamic>{'status': status.name};
+      if (status == SprintStatus.completed) {
+        patch['completedAt'] = FieldValue.serverTimestamp();
+      }
+      await docRef.update(patch);
+      final updated = await docRef.get();
+      return Sprint.fromMap(Map<String, dynamic>.from(updated.data()!));
+    });
+  }
+
+  Future<void> deleteSprint(int id) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final affected = await _firestore
+          .collection(_workItemsCollection)
+          .where('sprintId', isEqualTo: id)
+          .get();
+      final batch = _firestore.batch();
+      for (final doc in affected.docs) {
+        batch.update(doc.reference, {
+          'sprintId': null,
+          'sprint': null,
+          'bucket': WorkItemBucket.backlog.name,
+        });
+      }
+      batch.delete(_firestore.collection(_sprintsCollection).doc('$id'));
+      await batch.commit();
+    });
+  }
+
+  Future<List<BacklogGroup>> loadBacklogGroups(int workspaceId) async {
     return _guard(() async {
       await _ensureSeedData();
       final items = await _loadWorkItemMaps(workspaceId: workspaceId);
-      return items.where((data) => _bucketFromData(data) == WorkItemBucket.sprint).length;
+      final sprints = await listSprints(workspaceId: workspaceId);
+      final groups = <BacklogGroup>[];
+
+      for (final sprint in sprints) {
+        if (sprint.status == SprintStatus.completed) {
+          continue;
+        }
+        final sprintItems = items
+            .where((data) => (data['sprintId'] as num?)?.toInt() == sprint.id)
+            .map(_issueSummaryFromWorkItem)
+            .toList(growable: false);
+        final statusLabel = sprint.status == SprintStatus.active ? '进行中' : '计划中';
+        groups.add(_buildBacklogGroup(
+          '${sprint.name} · $statusLabel',
+          sprintItems,
+          sprintId: sprint.id,
+        ));
+      }
+
+      final backlogItems = items
+          .where((data) => (data['sprintId'] as num?) == null)
+          .map(_issueSummaryFromWorkItem)
+          .toList(growable: false);
+      groups.add(_buildBacklogGroup('待办事项列表', backlogItems));
+
+      return groups;
     });
+  }
+
+  BacklogGroup _buildBacklogGroup(
+    String title,
+    List<IssueSummary> items, {
+    int? sprintId,
+  }) {
+    return BacklogGroup(
+      title: title,
+      issueCount: items.length,
+      todoCount:
+          items.where((item) => item.statusKey == WorkItemStatus.todo).length,
+      inProgressCount: items
+          .where((item) => item.statusKey == WorkItemStatus.inProgress)
+          .length,
+      doneCount:
+          items.where((item) => item.statusKey == WorkItemStatus.done).length,
+      items: items,
+      sprintId: sprintId,
+    );
+  }
+
+  Future<int> loadBoardItemCount(int workspaceId) async {
+    final items = await loadBoardItems(workspaceId);
+    return items.length;
   }
 
   Future<List<IssueSummary>> loadBoardItems(int workspaceId) async {
     return _guard(() async {
       await _ensureSeedData();
+      final sprints = await listSprints(workspaceId: workspaceId);
+      final openSprintIds = sprints
+          .where((sprint) => sprint.status != SprintStatus.completed)
+          .map((sprint) => sprint.id)
+          .toSet();
       final items = await _loadWorkItemMaps(workspaceId: workspaceId);
-      return items
-          .where((data) => _bucketFromData(data) == WorkItemBucket.sprint)
-          .map(_issueSummaryFromWorkItem)
-          .toList(growable: false);
+      return items.where((data) {
+        final sprintId = (data['sprintId'] as num?)?.toInt();
+        if (sprintId != null) {
+          return openSprintIds.contains(sprintId);
+        }
+        return _bucketFromData(data) == WorkItemBucket.sprint;
+      }).map(_issueSummaryFromWorkItem).toList(growable: false);
     });
   }
 
@@ -648,14 +846,16 @@ class WorkItemApi {
     required int workspaceId,
     required String summary,
     String? description,
+    int? sprintId,
   }) async {
     return createWorkItem(WorkItemCreateRequest(
       workspaceId: workspaceId,
       workTypeId: 1,
       summary: summary,
       reporterId: 1,
-      bucket: WorkItemBucket.backlog,
+      bucket: sprintId != null ? WorkItemBucket.sprint : WorkItemBucket.backlog,
       status: WorkItemStatus.todo,
+      sprintId: sprintId,
       description: description,
     ));
   }
@@ -679,6 +879,19 @@ class WorkItemApi {
       final createdLabels = await _createMissingLabels(payload.newLabelNames);
       final labels = [...selectedLabels, ...createdLabels];
 
+      Sprint? sprint;
+      if (payload.sprintId != null) {
+        sprint = await getSprintById(payload.sprintId!);
+        if (sprint == null) {
+          throw const WorkItemApiException('找不到对应的冲刺。');
+        }
+        if (sprint.workspaceId != payload.workspaceId) {
+          throw const WorkItemApiException('该冲刺不属于当前空间。');
+        }
+      }
+      final effectiveBucket =
+          sprint != null ? WorkItemBucket.sprint : payload.bucket;
+
       final workItemId = await _nextId('workItems');
       final workspaceKey = workspace.subtitle?.trim().toUpperCase() ?? '';
       if (workspaceKey.isEmpty) {
@@ -694,11 +907,12 @@ class WorkItemApi {
         workspace: workspace,
         workType: workType,
         reporter: reporter,
-        bucket: payload.bucket,
+        bucket: effectiveBucket,
         status: payload.status,
         assignee: assignee,
         parent: parent,
         team: team,
+        sprint: sprint?.toLookup(),
         dueDate: payload.dueDate,
         startDate: payload.startDate,
         createdAt: now,
@@ -715,6 +929,7 @@ class WorkItemApi {
         'assigneeId': assignee?.id,
         'parentId': parent?.id,
         'teamId': team?.id,
+        'sprintId': sprint?.id,
         'labelIds': labels.map((item) => item.id).toList(),
         'createdBy': _currentUid,
         'createdAt': FieldValue.serverTimestamp(),
@@ -765,6 +980,7 @@ class WorkItemApi {
         'teams': 1,
         'labels': 0,
         'workItems': 0,
+        'sprints': 0,
         'feedback': 0,
       });
       transaction.set(bootstrapRef, {
@@ -974,6 +1190,18 @@ class WorkItemApi {
       workspaceId: (data['workspaceId'] as num?)?.toInt(),
       startDate: _asDateTime(data['startDate']),
       dueDate: _asDateTime(data['dueDate']),
+      sprintId: (data['sprintId'] as num?)?.toInt(),
+      priority: data['priority'] as String?,
+      workTypeId: (data['workTypeId'] as num?)?.toInt(),
+      workTypeTitle: () {
+        final wt = data['workType'];
+        if (wt is Map) {
+          return wt['title'] as String?;
+        }
+        return null;
+      }(),
+      lastViewedAt: _asDateTime(data['lastViewedAt']),
+      createdAt: _asDateTime(data['createdAt']),
     );
   }
 

@@ -120,7 +120,7 @@ class _RecentProjectIcon extends StatelessWidget {
     final backgroundColor =
         item.iconBackgroundColor ?? palette.primarySoft.withValues(alpha: 0.75);
 
-    return Container(
+    final iconWidget = Container(
       width: 44,
       height: 44,
       decoration: BoxDecoration(
@@ -132,6 +132,34 @@ class _RecentProjectIcon extends StatelessWidget {
         color: iconColor,
         size: 26,
       ),
+    );
+
+    if (item.id == null) {
+      return iconWidget;
+    }
+    return Hero(
+      tag: 'work-item-icon-${item.id}',
+      flightShuttleBuilder: (
+        flightContext,
+        animation,
+        direction,
+        fromContext,
+        toContext,
+      ) {
+        final hero = (direction == HeroFlightDirection.push
+                ? toContext.widget
+                : fromContext.widget) as Hero;
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return ScaleTransition(
+          scale: Tween<double>(begin: 1.0, end: 1.04).animate(curved),
+          child: hero.child,
+        );
+      },
+      child: iconWidget,
     );
   }
 }

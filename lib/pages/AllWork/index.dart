@@ -5,7 +5,7 @@ import 'package:ottersync/components/AllWork/FilterSheet.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
 import 'package:ottersync/components/Common/IssueListTile.dart';
-import 'package:ottersync/components/Common/UserAvatar.dart';
+import 'package:ottersync/components/Common/PageHeader.dart';
 import 'package:ottersync/components/Common/demo_feedback.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
@@ -50,41 +50,29 @@ class _AllWorkViewState extends State<AllWorkView> {
     final theme = Theme.of(context);
     final palette = AppThemePalette.of(context);
 
-    return ListView(
-      padding: AppSpace.pagePaddingWithNav,
+    return Column(
       children: [
-        Row(
-          children: [
-            InkWell(
-              onTap: () => context.push('/account'),
-              borderRadius: BorderRadius.circular(999),
-              child: const UserAvatar(label: 'MT'),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text('所有工作', style: theme.textTheme.headlineMedium),
-            ),
-            IconButton(
-              onPressed: () => context.push('/search?scope=workItems'),
-              icon: Icon(
-                Icons.search_rounded,
-                color: palette.textSecondary,
-                size: 30,
-              ),
+        PageHeader(
+          title: '所有工作',
+          actions: [
+            HeaderIconButton(
+              icon: Icons.search_rounded,
               tooltip: '搜索',
+              onPressed: () => context.push('/search?scope=workItems'),
             ),
-            IconButton(
-              onPressed: _openCreatePage,
-              icon: Icon(
-                Icons.add_rounded,
-                color: palette.primary,
-                size: 30,
-              ),
+            HeaderIconButton(
+              icon: Icons.add_rounded,
+              emphasized: true,
               tooltip: '创建工作项',
+              onPressed: _openCreatePage,
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        Expanded(
+          child: PageFadeSlide(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
+              children: [
         AllWorkToolbar(
           selectedFilter: _selectedFilter,
           viewMode: _viewMode,
@@ -197,6 +185,10 @@ class _AllWorkViewState extends State<AllWorkView> {
                     );
                   },
                 ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

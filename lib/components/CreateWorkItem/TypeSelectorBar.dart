@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
+import 'package:ottersync/components/Common/SheetHeader.dart';
+import 'package:ottersync/components/Common/work_type_icon.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
 
@@ -78,11 +80,7 @@ class TypeSelectorBar extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.check_box_outlined,
-                      color: theme.colorScheme.primary,
-                      size: 24,
-                    ),
+                    WorkTypeIconBadge(title: workType?.title, size: 26),
                     const SizedBox(width: 12),
                     Flexible(
                       child: Text(
@@ -130,28 +128,35 @@ class TypeSelectorBar extends StatelessWidget {
                   return item.title.toLowerCase().contains(query) ||
                       (item.subtitle?.toLowerCase().contains(query) ?? false);
                 }).toList(growable: false);
+                final isWorkType = title == '选择工作类型';
                 return AppSurface(
-                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
                   radius: AppSpace.radiusXLarge,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(title, style: theme.textTheme.titleLarge),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: searchController,
-                        onChanged: (_) => setSheetState(() {}),
-                        decoration: InputDecoration(
-                          hintText: title == '选择空间' ? '搜索空间' : '搜索工作类型',
-                          prefixIcon: const Icon(Icons.search_rounded),
+                      SheetHeader(title: title),
+                      Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 20),
+                        child: TextField(
+                          controller: searchController,
+                          onChanged: (_) => setSheetState(() {}),
+                          decoration: InputDecoration(
+                            hintText: isWorkType ? '搜索工作类型' : '搜索空间',
+                            prefixIcon: const Icon(Icons.search_rounded),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
                       if (filtered.isEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 24),
-                          child: Text('暂无可选项', style: theme.textTheme.bodyMedium),
+                          child: Center(
+                            child: Text('暂无可选项',
+                                style: theme.textTheme.bodyMedium),
+                          ),
                         )
                       else
                         SizedBox(
@@ -162,11 +167,22 @@ class TypeSelectorBar extends StatelessWidget {
                               final item = filtered[index];
                               final isSelected = item.id == selected?.id;
                               return ListTile(
-                                contentPadding: EdgeInsets.zero,
+                                leading: isWorkType
+                                    ? WorkTypeIconBadge(
+                                        title: item.title, size: 26)
+                                    : const Icon(
+                                        Icons.workspaces_rounded,
+                                        color: Color(0xFF1F5DBD),
+                                      ),
                                 title: Text(item.title),
-                                subtitle: item.subtitle == null ? null : Text(item.subtitle!),
-                                trailing: isSelected ? const Icon(Icons.check_rounded) : null,
-                                onTap: () => Navigator.of(context).pop(item),
+                                subtitle: item.subtitle == null
+                                    ? null
+                                    : Text(item.subtitle!),
+                                trailing: isSelected
+                                    ? const Icon(Icons.check_rounded)
+                                    : null,
+                                onTap: () =>
+                                    Navigator.of(context).pop(item),
                               );
                             },
                           ),

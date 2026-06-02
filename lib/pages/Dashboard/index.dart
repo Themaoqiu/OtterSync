@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
-import 'package:ottersync/components/Common/UserAvatar.dart';
+import 'package:ottersync/components/Common/PageHeader.dart';
+import 'package:ottersync/components/Common/SheetHeader.dart';
 import 'package:ottersync/components/Common/demo_feedback.dart';
 import 'package:ottersync/components/Dashboard/AssignedIssuesCard.dart';
 import 'package:ottersync/components/Dashboard/DashboardActivityCard.dart';
@@ -39,32 +40,26 @@ class _DashboardViewState extends State<DashboardView> {
     final theme = Theme.of(context);
     final palette = AppThemePalette.of(context);
 
-    return ListView(
-      padding: AppSpace.pagePaddingWithNav,
+    return Column(
       children: [
-        Row(
-          children: [
-            InkWell(
-              onTap: () => context.push('/account'),
-              borderRadius: BorderRadius.circular(999),
-              child: const UserAvatar(label: 'MT'),
-            ),
-            const Spacer(),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Text('仪表板', style: theme.textTheme.titleLarge),
-        const SizedBox(height: 16),
+        const PageHeader(title: '仪表板'),
+        Expanded(
+          child: PageFadeSlide(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
+              children: [
         AppSurface(
           padding: const EdgeInsets.all(0),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
             onTap: () => showModalBottomSheet(
               context: context,
+              showDragHandle: true,
               builder: (ctx) => SafeArea(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const SheetHeader(title: '选择仪表板'),
                     ListTile(
                       title: const Text('默认仪表板'),
                       leading: Icon(
@@ -77,7 +72,7 @@ class _DashboardViewState extends State<DashboardView> {
                       ),
                     ),
                     const Padding(
-                      padding: EdgeInsets.all(16),
+                      padding: EdgeInsets.all(20),
                       child: Text(
                         '暂无其他仪表板',
                         style: TextStyle(color: Colors.grey),
@@ -164,6 +159,10 @@ class _DashboardViewState extends State<DashboardView> {
               }
             }
           },
+        ),
+              ],
+            ),
+          ),
         ),
       ],
     );

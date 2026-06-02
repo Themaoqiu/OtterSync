@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
+import 'package:ottersync/components/Common/SheetHeader.dart';
 import 'package:ottersync/components/SpaceDetails/BacklogTabView.dart';
 import 'package:ottersync/components/SpaceDetails/BoardTabView.dart';
 import 'package:ottersync/components/SpaceDetails/CalendarTabView.dart';
 import 'package:ottersync/components/SpaceDetails/ReportTabView.dart';
 import 'package:ottersync/components/SpaceDetails/SettingsTabView.dart';
+import 'package:ottersync/components/SpaceDetails/SprintManagerSheet.dart';
 import 'package:ottersync/components/SpaceDetails/SummaryTabView.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
 import 'package:ottersync/viewmodels/work_item_api.dart';
+import 'package:ottersync/viewmodels/work_item_models.dart';
 
 class SpaceDetailsView extends StatefulWidget {
   const SpaceDetailsView({super.key, this.spaceId, WorkItemApi? api})
@@ -21,14 +25,17 @@ class SpaceDetailsView extends StatefulWidget {
   State<SpaceDetailsView> createState() => _SpaceDetailsViewState();
 }
 
-class _SpaceDetailsViewState extends State<SpaceDetailsView> {
+class _SpaceDetailsViewState extends State<SpaceDetailsView>
+    with SingleTickerProviderStateMixin {
   late final WorkItemApi _api;
+  late final TabController _tabController;
   JiraSpace? _space;
   List<SpaceSummaryMetric> _metrics = const [];
   List<BacklogGroup> _groups = const [];
   List<IssueSummary> _boardItems = const [];
   List<IssueSummary> _calendarItems = const [];
-  final List<String> _calendarFilters = const ['状态', '经办人', '优先级', '类型'];
+  List<IssueSummary> _allItems = const [];
+  List<Sprint> _sprints = const [];
   WorkItemStatus? _statusFilter;
   bool _loading = true;
   String? _error;
@@ -37,69 +44,71 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
   void initState() {
     super.initState();
     _api = widget._api ?? WorkItemApi();
+    _tabController = TabController(length: 6, vsync: this);
     _loadSpaceDetails();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = AppThemePalette.of(context);
 
-    return DefaultTabController(
-      length: 6,
-      child: Builder(
-        builder: (context) {
-          return Scaffold(
-            appBar: AppBar(
-              leading: const BackButton(),
-              titleSpacing: 0,
-              title: Row(
-                children: [
-                  Text(
-                    _space?.name ?? '空间详情',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(
-                    Icons.arrow_drop_down_rounded,
-                    color: palette.textSecondary,
-                  ),
-                ],
-              ),
-              actions: [
-                IconButton(
-                  onPressed: _openStatusFilter,
-                  icon: Icon(
-                    _statusFilter != null
-                        ? Icons.filter_alt
-                        : Icons.filter_alt_outlined,
-                  ),
-                ),
-                IconButton(
-                  onPressed: _openMoreActions,
-                  icon: const Icon(Icons.more_vert_rounded),
-                ),
-              ],
-              bottom: TabBar(
-                isScrollable: true,
-                dividerColor: palette.divider,
-                labelColor: palette.primary,
-                unselectedLabelColor: palette.textSecondary,
-                indicatorColor: palette.primary,
-                tabAlignment: TabAlignment.start,
-                tabs: const [
-                  Tab(text: '摘要'),
-                  Tab(text: '面板'),
-                  Tab(text: '日历'),
-                  Tab(text: '待办事项列表'),
-                  Tab(text: '报告'),
-                  Tab(text: '设置'),
-                ],
-              ),
+    return Scaffold(
+      appBar: AppBar(
+        leading: const BackButton(),
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            Text(
+              _space?.name ?? '空间详情',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-            body: _buildBody(context),
-          );
-        },
+            const SizedBox(width: 6),
+            Icon(
+              Icons.arrow_drop_down_rounded,
+              color: palette.textSecondary,
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            onPressed: _openStatusFilter,
+            tooltip: '状态筛选',
+            icon: Icon(
+              _statusFilter != null
+                  ? Icons.filter_alt
+                  : Icons.filter_alt_outlined,
+            ),
+          ),
+          IconButton(
+            onPressed: _openMoreActions,
+            icon: const Icon(Icons.more_vert_rounded),
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          dividerColor: palette.divider,
+          labelColor: palette.primary,
+          unselectedLabelColor: palette.textSecondary,
+          indicatorColor: palette.primary,
+          tabAlignment: TabAlignment.start,
+          tabs: const [
+            Tab(text: '摘要'),
+            Tab(text: '面板'),
+            Tab(text: '日历'),
+            Tab(text: '待办事项列表'),
+            Tab(text: '报告'),
+            Tab(text: '设置'),
+          ],
+        ),
       ),
+      body: _buildBody(context),
     );
   }
 
@@ -133,30 +142,54 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
               inProgressCount: filtered.where((i) => i.statusKey == WorkItemStatus.inProgress).length,
               doneCount: filtered.where((i) => i.statusKey == WorkItemStatus.done).length,
               items: filtered,
+              sprintId: group.sprintId,
             );
-          }).where((g) => g.issueCount > 0).toList(growable: false);
+          }).where((g) => g.items.isNotEmpty || g.sprintId == null).toList(growable: false);
 
     final filteredBoardItems = _statusFilter == null
         ? _boardItems
         : _boardItems.where((item) => item.statusKey == _statusFilter).toList(growable: false);
 
+    final statusCounts = <WorkItemStatus, int>{};
+    for (final s in WorkItemStatus.values) {
+      statusCounts[s] = _allItems.where((i) => i.statusKey == s).length;
+    }
+    final priorityCounts = <String, int>{};
+    for (final i in _allItems) {
+      final p = i.priority ?? 'Medium';
+      priorityCounts[p] = (priorityCounts[p] ?? 0) + 1;
+    }
+
     return TabBarView(
+      controller: _tabController,
       children: [
         SummaryTabView(
           metrics: _metrics,
+          statusCounts: statusCounts,
+          priorityCounts: priorityCounts,
+          onMetricTap: (index) => _tabController.animateTo(_metricToTab(index)),
           onStatusTap: (status) {
-            final match = WorkItemStatus.values.where((s) => workItemStatusLabel(s) == status);
-            if (match.isNotEmpty) {
-              setState(() => _statusFilter = match.first);
-            }
+            setState(() => _statusFilter = status);
+            _tabController.animateTo(3);
+          },
+          onPriorityTap: (label) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('已筛选优先级：$label（仅在数据存在时生效）')),
+            );
           },
         ),
         BoardTabView(
-          itemCount: filteredBoardItems.length,
+          sprints: _sprints,
           items: filteredBoardItems,
-          onOpenBacklog: () => DefaultTabController.of(context).animateTo(4),
+          onOpenSprintManager: _openSprintManager,
+          onItemTap: _openWorkItem,
+          onItemStatusChanged: _onItemStatusChanged,
         ),
-        CalendarTabView(filters: _calendarFilters, items: _calendarItems),
+        CalendarTabView(
+          items: _calendarItems,
+          onItemTap: _openWorkItem,
+          onScheduleItem: _scheduleItemDueDate,
+        ),
         if (filteredGroups.isEmpty)
           EmptyStateView(
             icon: Icons.view_list_outlined,
@@ -166,24 +199,46 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
         else
           BacklogTabView(
             groups: filteredGroups,
-            onCreate: _createBacklogItem,
+            onCreate: _createBacklogItemForGroup,
+            onItemTap: _openWorkItem,
+            onToggleDone: _toggleItemDone,
           ),
-        ReportTabView(metrics: _metrics),
+        ReportTabView(
+          spaceKey: _space?.key ?? 'OT',
+          sprints: _sprints,
+          items: _allItems,
+        ),
         SettingsTabView(space: _space!),
       ],
     );
+  }
+
+  int _metricToTab(int index) {
+    switch (index) {
+      case 0:
+      case 1:
+        return 1;
+      case 2:
+        return 3;
+      case 3:
+        return 2;
+      default:
+        return 0;
+    }
   }
 
   void _openMoreActions() {
     final palette = AppThemePalette.of(context);
     showModalBottomSheet(
       context: context,
+      showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const SheetHeader(title: '空间操作'),
             ListTile(
-              leading: Icon(Icons.edit_outlined, color: palette.textPrimary),
+              leading: Icon(Icons.edit_rounded, color: palette.primary),
               title: const Text('编辑空间名称'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -191,7 +246,17 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.delete_outline_rounded, color: palette.danger),
+              leading: const Icon(Icons.flag_rounded,
+                  color: Color(0xFF1F5DBD)),
+              title: const Text('管理冲刺'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _openSprintManager();
+              },
+            ),
+            ListTile(
+              leading:
+                  Icon(Icons.delete_rounded, color: palette.danger),
               title: Text(
                 '删除空间',
                 style: TextStyle(color: palette.danger),
@@ -201,6 +266,7 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
                 _confirmDeleteSpace();
               },
             ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -224,7 +290,7 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('取消'),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             child: const Text('保存'),
           ),
@@ -259,12 +325,12 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('取消'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              '删除',
-              style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除'),
           ),
         ],
       ),
@@ -285,43 +351,44 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
     }
   }
 
-  Future<void> _createBacklogItem() async {
+  Future<void> _openSprintManager() async {
     if (_space == null) return;
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
+    await showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('创建待办事项'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: '摘要'),
-          textInputAction: TextInputAction.done,
-          onSubmitted: (value) => Navigator.pop(ctx, value.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('创建'),
-          ),
-        ],
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => SprintManagerSheet(
+        api: _api,
+        workspaceId: _space!.id,
+        onChanged: _loadSpaceDetails,
       ),
     );
-    if (result == null || result.isEmpty || !mounted) return;
+  }
+
+  Future<void> _createBacklogItemForGroup(
+      BacklogGroup group, String summary) async {
+    if (_space == null) return;
     try {
-      await _api.createBacklogItem(
+      final created = await _api.createBacklogItem(
         workspaceId: _space!.id,
-        summary: result,
+        summary: summary,
+        sprintId: group.sprintId,
       );
       if (!mounted) return;
+      // 局部更新：只刷新 backlog 与全部数据，避免整页 loading
+      final groups = await _api.loadBacklogGroups(_space!.id);
+      final allItems = await _api.loadCalendarItems(_space!.id);
+      final boardItems = await _api.loadBoardItems(_space!.id);
+      if (!mounted) return;
+      setState(() {
+        _groups = groups;
+        _allItems = allItems;
+        _calendarItems = allItems;
+        _boardItems = boardItems;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('待办事项已创建')),
+        SnackBar(content: Text('已创建 ${created.key}')),
       );
-      await _loadSpaceDetails();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -330,17 +397,120 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
     }
   }
 
+  Future<void> _toggleItemDone(IssueSummary item, bool done) async {
+    if (item.id == null) return;
+    final newStatus = done ? WorkItemStatus.done : WorkItemStatus.todo;
+    _applyLocalStatus(item.id!, newStatus);
+    try {
+      await _api.updateWorkItemStatus(item.id!, newStatus);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('更新失败：$e')));
+    }
+  }
+
+  Future<void> _onItemStatusChanged(
+      IssueSummary item, WorkItemStatus status) async {
+    if (item.id == null) return;
+    _applyLocalStatus(item.id!, status);
+    try {
+      await _api.updateWorkItemStatus(item.id!, status);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('更新失败：$e')));
+    }
+  }
+
+  Future<void> _scheduleItemDueDate(
+      IssueSummary item, DateTime date) async {
+    if (item.id == null) return;
+    final updated = item.copyWith(dueDate: date);
+    setState(() {
+      _allItems = _allItems
+          .map((i) => i.id == item.id ? updated : i)
+          .toList(growable: false);
+      _calendarItems = _allItems;
+      _boardItems = _boardItems
+          .map((i) => i.id == item.id ? updated : i)
+          .toList(growable: false);
+    });
+    try {
+      await _api.updateWorkItemDueDate(item.id!, date);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已安排到 ${date.month}/${date.day}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('更新失败：$e')));
+    }
+  }
+
+  void _applyLocalStatus(int id, WorkItemStatus status) {
+    final label = workItemStatusLabel(status);
+    IssueSummary patch(IssueSummary i) =>
+        i.id == id ? i.copyWith(statusKey: status, status: label) : i;
+    setState(() {
+      _allItems = _allItems.map(patch).toList(growable: false);
+      _calendarItems = _calendarItems.map(patch).toList(growable: false);
+      _boardItems = _boardItems.map(patch).toList(growable: false);
+      _groups = _groups
+          .map((g) {
+            final items = g.items.map(patch).toList(growable: false);
+            return BacklogGroup(
+              title: g.title,
+              issueCount: items.length,
+              todoCount:
+                  items.where((i) => i.statusKey == WorkItemStatus.todo).length,
+              inProgressCount: items
+                  .where((i) => i.statusKey == WorkItemStatus.inProgress)
+                  .length,
+              doneCount:
+                  items.where((i) => i.statusKey == WorkItemStatus.done).length,
+              items: items,
+              sprintId: g.sprintId,
+            );
+          })
+          .toList(growable: false);
+    });
+  }
+
+  (IconData, Color) _statusVisual(WorkItemStatus status) {
+    switch (status) {
+      case WorkItemStatus.todo:
+        return (
+          Icons.radio_button_unchecked_rounded,
+          const Color(0xFF44546F),
+        );
+      case WorkItemStatus.inProgress:
+        return (Icons.timelapse_rounded, const Color(0xFF1F5DBD));
+      case WorkItemStatus.done:
+        return (Icons.check_circle_rounded, const Color(0xFF1F8B4C));
+    }
+  }
+
+  void _openWorkItem(IssueSummary item) {
+    if (item.id == null) return;
+    GoRouter.of(context).push('/work-item/${item.id}', extra: item);
+  }
+
   void _openStatusFilter() {
     final palette = AppThemePalette.of(context);
     showModalBottomSheet(
       context: context,
+      showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const SheetHeader(title: '按状态筛选'),
             ListTile(
               title: const Text('全部'),
-              leading: Icon(Icons.list_rounded, color: palette.primary),
+              leading: const Icon(Icons.all_inclusive_rounded,
+                  color: Color(0xFF44546F)),
               trailing: _statusFilter == null
                   ? Icon(Icons.check_rounded, color: palette.primary)
                   : null,
@@ -350,25 +520,22 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
               },
             ),
             ...WorkItemStatus.values.map(
-              (status) => ListTile(
-                title: Text(workItemStatusLabel(status)),
-                leading: Icon(
-                  status == WorkItemStatus.done
-                      ? Icons.check_circle_outline_rounded
-                      : status == WorkItemStatus.inProgress
-                          ? Icons.play_circle_outline_rounded
-                          : Icons.circle_outlined,
-                  color: palette.primary,
-                ),
-                trailing: _statusFilter == status
-                    ? Icon(Icons.check_rounded, color: palette.primary)
-                    : null,
-                onTap: () {
-                  setState(() => _statusFilter = status);
-                  Navigator.pop(ctx);
-                },
-              ),
+              (status) {
+                final (icon, color) = _statusVisual(status);
+                return ListTile(
+                  title: Text(workItemStatusLabel(status)),
+                  leading: Icon(icon, color: color),
+                  trailing: _statusFilter == status
+                      ? Icon(Icons.check_rounded, color: palette.primary)
+                      : null,
+                  onTap: () {
+                    setState(() => _statusFilter = status);
+                    Navigator.pop(ctx);
+                  },
+                );
+              },
             ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -385,15 +552,15 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
       if (spaceId == null) {
         final spaces = await _api.listSpaces();
         if (spaces.isEmpty) {
-          if (!mounted) {
-            return;
-          }
+          if (!mounted) return;
           setState(() {
             _space = null;
             _metrics = const [];
             _groups = const [];
             _boardItems = const [];
             _calendarItems = const [];
+            _allItems = const [];
+            _sprints = const [];
             _loading = false;
           });
           return;
@@ -404,34 +571,31 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView> {
       }
 
       if (_space == null) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _loading = false;
-        });
+        if (!mounted) return;
+        setState(() => _loading = false);
         return;
       }
 
-      final metrics = await _api.loadSpaceSummaryMetrics(_space!.id);
-      final groups = await _api.loadBacklogGroups(_space!.id);
-      final boardItems = await _api.loadBoardItems(_space!.id);
-      final calendarItems = await _api.loadCalendarItems(_space!.id);
+      final results = await Future.wait([
+        _api.loadSpaceSummaryMetrics(_space!.id),
+        _api.loadBacklogGroups(_space!.id),
+        _api.loadBoardItems(_space!.id),
+        _api.loadCalendarItems(_space!.id),
+        _api.listSprints(workspaceId: _space!.id),
+      ]);
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
-        _metrics = metrics;
-        _groups = groups;
-        _boardItems = boardItems;
-        _calendarItems = calendarItems;
+        _metrics = results[0] as List<SpaceSummaryMetric>;
+        _groups = results[1] as List<BacklogGroup>;
+        _boardItems = results[2] as List<IssueSummary>;
+        _calendarItems = results[3] as List<IssueSummary>;
+        _allItems = results[3] as List<IssueSummary>;
+        _sprints = results[4] as List<Sprint>;
         _loading = false;
       });
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _error = '$error';
         _loading = false;

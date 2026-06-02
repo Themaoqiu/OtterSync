@@ -11,6 +11,7 @@ class CreateWorkItemMoreFieldsSection extends StatelessWidget {
     required this.assignee,
     required this.team,
     required this.parent,
+    required this.sprint,
     required this.startDate,
     required this.dueDate,
     required this.selectedLabelCount,
@@ -21,6 +22,7 @@ class CreateWorkItemMoreFieldsSection extends StatelessWidget {
     required this.onPickLabels,
     required this.onPickParent,
     required this.onPickTeam,
+    required this.onPickSprint,
     required this.onPickStartDate,
     required this.onPickDueDate,
     super.key,
@@ -32,6 +34,7 @@ class CreateWorkItemMoreFieldsSection extends StatelessWidget {
   final LookupOption? assignee;
   final LookupOption? team;
   final LookupOption? parent;
+  final LookupOption? sprint;
   final DateTime? startDate;
   final DateTime? dueDate;
   final int selectedLabelCount;
@@ -42,6 +45,7 @@ class CreateWorkItemMoreFieldsSection extends StatelessWidget {
   final VoidCallback onPickLabels;
   final VoidCallback onPickParent;
   final VoidCallback onPickTeam;
+  final VoidCallback onPickSprint;
   final VoidCallback onPickStartDate;
   final VoidCallback onPickDueDate;
 
@@ -88,6 +92,13 @@ class CreateWorkItemMoreFieldsSection extends StatelessWidget {
             helper: team?.subtitle,
             leading: const Icon(Icons.groups_2_outlined),
             onTap: onPickTeam,
+          ),
+          FieldTile(
+            title: '冲刺',
+            value: sprint?.title ?? '无',
+            helper: sprint?.subtitle,
+            leading: const Icon(Icons.flag_outlined),
+            onTap: onPickSprint,
           ),
           FieldTile(
             title: '开始日期',

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
-import 'package:ottersync/components/Common/UserAvatar.dart';
+import 'package:ottersync/components/Common/PageHeader.dart';
 import 'package:ottersync/state/theme_controller.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
@@ -36,25 +36,25 @@ class _NotificationsViewState extends State<NotificationsView> {
     final palette = AppThemePalette.of(context);
     final themeController = ThemeControllerScope.of(context);
 
-    return ListView(
-      padding: AppSpace.pagePaddingWithNav,
+    return Column(
       children: [
-        Row(
-          children: [
-            InkWell(
-              onTap: () => context.push('/account'),
-              borderRadius: BorderRadius.circular(999),
-              child: const UserAvatar(label: 'MT'),
-            ),
-            const SizedBox(width: 16),
-            Expanded(child: Text('通知', style: theme.textTheme.titleLarge)),
-            Switch(
-              value: themeController.isDarkMode,
-              onChanged: (_) => themeController.toggle(),
+        PageHeader(
+          title: '通知',
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Switch(
+                value: themeController.isDarkMode,
+                onChanged: (_) => themeController.toggle(),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        Expanded(
+          child: PageFadeSlide(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
+              children: [
         if (_loading)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
@@ -125,6 +125,10 @@ class _NotificationsViewState extends State<NotificationsView> {
                 ? '当前为深色模式。切换开关后，所有页面会同步切换到浅色模式。'
                 : '当前为浅色模式。切换开关后，所有页面会同步切换到深色模式。',
             style: theme.textTheme.bodyMedium,
+          ),
+        ),
+              ],
+            ),
           ),
         ),
       ],

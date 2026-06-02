@@ -24,8 +24,8 @@ class CircleIconButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppSpace.radiusFull),
       child: Container(
-        width: 56,
-        height: 56,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
           color: filled ? theme.colorScheme.primary : palette.surface,
           shape: BoxShape.circle,
@@ -34,8 +34,8 @@ class CircleIconButton extends StatelessWidget {
         child: Center(
           child: busy
               ? SizedBox(
-                  width: 22,
-                  height: 22,
+                  width: 18,
+                  height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.2,
                     color: filled ? Colors.white : palette.primary,
@@ -46,7 +46,7 @@ class CircleIconButton extends StatelessWidget {
                   color: onTap == null
                       ? palette.textTertiary
                       : (filled ? Colors.white : palette.textPrimary),
-                  size: 28,
+                  size: 22,
                 ),
         ),
       ),

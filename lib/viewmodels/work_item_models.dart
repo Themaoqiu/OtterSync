@@ -78,6 +78,7 @@ class WorkItemCreateRequest {
     this.assigneeId,
     this.parentId,
     this.teamId,
+    this.sprintId,
     this.dueDate,
     this.startDate,
     this.labelIds = const [],
@@ -95,6 +96,7 @@ class WorkItemCreateRequest {
   final int? assigneeId;
   final int? parentId;
   final int? teamId;
+  final int? sprintId;
   final DateTime? dueDate;
   final DateTime? startDate;
   final List<int> labelIds;
@@ -130,6 +132,7 @@ class WorkItemResponse {
     this.assignee,
     this.parent,
     this.team,
+    this.sprint,
     this.dueDate,
     this.startDate,
     this.createdAt,
@@ -150,6 +153,7 @@ class WorkItemResponse {
       assignee: _lookupOrNull(map['assignee']),
       parent: _lookupOrNull(map['parent']),
       team: _lookupOrNull(map['team']),
+      sprint: _lookupOrNull(map['sprint']),
       dueDate: _dateTimeOrNull(map['dueDate']),
       startDate: _dateTimeOrNull(map['startDate']),
       createdAt: _dateTimeOrNull(map['createdAt']),
@@ -175,6 +179,7 @@ class WorkItemResponse {
   final LookupOption? assignee;
   final LookupOption? parent;
   final LookupOption? team;
+  final LookupOption? sprint;
   final DateTime? dueDate;
   final DateTime? startDate;
   final DateTime? createdAt;
@@ -196,6 +201,7 @@ class WorkItemResponse {
       'assignee': assignee?.toMap(),
       'parent': parent?.toMap(),
       'team': team?.toMap(),
+      'sprint': sprint?.toMap(),
       'dueDate': dueDate,
       'startDate': startDate,
       'createdAt': createdAt,
@@ -220,6 +226,92 @@ class CreateWorkItemLookups {
   final List<LookupOption> users;
   final List<LookupOption> teams;
   final List<LookupOption> labels;
+}
+
+enum SprintStatus { planned, active, completed }
+
+class Sprint {
+  const Sprint({
+    required this.id,
+    required this.workspaceId,
+    required this.name,
+    required this.status,
+    this.goal,
+    this.startDate,
+    this.endDate,
+    this.completedAt,
+  });
+
+  factory Sprint.fromMap(Map<String, dynamic> map) {
+    return Sprint(
+      id: (map['id'] as num).toInt(),
+      workspaceId: (map['workspaceId'] as num).toInt(),
+      name: map['name'] as String? ?? '',
+      goal: map['goal'] as String?,
+      status: _sprintStatusFromString(map['status'] as String?),
+      startDate: _dateTimeOrNull(map['startDate']),
+      endDate: _dateTimeOrNull(map['endDate']),
+      completedAt: _dateTimeOrNull(map['completedAt']),
+    );
+  }
+
+  final int id;
+  final int workspaceId;
+  final String name;
+  final String? goal;
+  final SprintStatus status;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final DateTime? completedAt;
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'workspaceId': workspaceId,
+      'name': name,
+      'goal': goal,
+      'status': status.name,
+      'startDate': startDate,
+      'endDate': endDate,
+      'completedAt': completedAt,
+    };
+  }
+
+  LookupOption toLookup() {
+    return LookupOption(
+      id: id,
+      title: name,
+      subtitle: status == SprintStatus.active
+          ? '进行中'
+          : status == SprintStatus.planned
+              ? '计划中'
+              : '已结束',
+      status: status.name,
+    );
+  }
+}
+
+SprintStatus _sprintStatusFromString(String? value) {
+  return SprintStatus.values.firstWhere(
+    (status) => status.name == value,
+    orElse: () => SprintStatus.planned,
+  );
+}
+
+class SprintCreateRequest {
+  const SprintCreateRequest({
+    required this.workspaceId,
+    required this.name,
+    this.goal,
+    this.startDate,
+    this.endDate,
+  });
+
+  final int workspaceId;
+  final String name;
+  final String? goal;
+  final DateTime? startDate;
+  final DateTime? endDate;
 }
 
 LookupOption? _lookupOrNull(Object? value) {

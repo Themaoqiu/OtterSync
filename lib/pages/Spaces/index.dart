@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
+import 'package:ottersync/components/Common/PageHeader.dart';
 import 'package:ottersync/components/Common/SectionHeader.dart';
-import 'package:ottersync/components/Common/UserAvatar.dart';
 import 'package:ottersync/components/Spaces/CreateSpaceDialog.dart';
 import 'package:ottersync/components/Spaces/SpaceCard.dart';
 import 'package:ottersync/theme/design_tokens.dart';
@@ -44,49 +44,26 @@ class _SpacesViewState extends State<SpacesView> {
         bottom: false,
         child: Column(
           children: [
-            Padding(
-              padding: AppSpace.pagePadding,
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      InkWell(
-                        onTap: () => context.push('/account'),
-                        borderRadius: BorderRadius.circular(999),
-                        child: const UserAvatar(label: 'MT'),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        onPressed: () => context.push('/search?scope=spaces'),
-                        icon: Icon(
-                          Icons.search_rounded,
-                          color: palette.textSecondary,
-                          size: 30,
-                        ),
-                        tooltip: '搜索',
-                      ),
-                      IconButton(
-                        onPressed: _openCreateSpaceDialog,
-                        icon: Icon(
-                          Icons.add_rounded,
-                          color: palette.primary,
-                          size: 30,
-                        ),
-                        tooltip: '创建空间',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('空间', style: theme.textTheme.headlineMedium),
-                  ),
-                ],
-              ),
+            PageHeader(
+              title: '空间',
+              actions: [
+                HeaderIconButton(
+                  icon: Icons.search_rounded,
+                  tooltip: '搜索',
+                  onPressed: () => context.push('/search?scope=spaces'),
+                ),
+                HeaderIconButton(
+                  icon: Icons.add_rounded,
+                  emphasized: true,
+                  tooltip: '创建空间',
+                  onPressed: _openCreateSpaceDialog,
+                ),
+              ],
             ),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
+              child: PageFadeSlide(
+                child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
                 children: [
                   const SizedBox(height: 8),
                   const SectionHeader(
@@ -123,6 +100,7 @@ class _SpacesViewState extends State<SpacesView> {
                     ),
                   ),
                 ],
+              ),
               ),
             ),
           ],

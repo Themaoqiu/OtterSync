@@ -40,6 +40,12 @@ class IssueSummary {
     this.workspaceId,
     this.startDate,
     this.dueDate,
+    this.sprintId,
+    this.priority,
+    this.workTypeId,
+    this.workTypeTitle,
+    this.lastViewedAt,
+    this.createdAt,
   });
 
   final int? id;
@@ -56,6 +62,58 @@ class IssueSummary {
   final int? workspaceId;
   final DateTime? startDate;
   final DateTime? dueDate;
+  final int? sprintId;
+  final String? priority;
+  final int? workTypeId;
+  final String? workTypeTitle;
+  final DateTime? lastViewedAt;
+  final DateTime? createdAt;
+
+  IssueSummary copyWith({
+    int? id,
+    String? title,
+    String? key,
+    String? subtitle,
+    String? status,
+    String? assigneeInitials,
+    IconData? icon,
+    Color? iconBackgroundColor,
+    Color? iconColor,
+    WorkItemStatus? statusKey,
+    WorkItemBucket? bucket,
+    int? workspaceId,
+    DateTime? startDate,
+    DateTime? dueDate,
+    int? sprintId,
+    String? priority,
+    int? workTypeId,
+    String? workTypeTitle,
+    DateTime? lastViewedAt,
+    DateTime? createdAt,
+  }) {
+    return IssueSummary(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      key: key ?? this.key,
+      subtitle: subtitle ?? this.subtitle,
+      status: status ?? this.status,
+      assigneeInitials: assigneeInitials ?? this.assigneeInitials,
+      icon: icon ?? this.icon,
+      iconBackgroundColor: iconBackgroundColor ?? this.iconBackgroundColor,
+      iconColor: iconColor ?? this.iconColor,
+      statusKey: statusKey ?? this.statusKey,
+      bucket: bucket ?? this.bucket,
+      workspaceId: workspaceId ?? this.workspaceId,
+      startDate: startDate ?? this.startDate,
+      dueDate: dueDate ?? this.dueDate,
+      sprintId: sprintId ?? this.sprintId,
+      priority: priority ?? this.priority,
+      workTypeId: workTypeId ?? this.workTypeId,
+      workTypeTitle: workTypeTitle ?? this.workTypeTitle,
+      lastViewedAt: lastViewedAt ?? this.lastViewedAt,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
 
 class JiraSpace {
@@ -137,6 +195,7 @@ class BacklogGroup {
     required this.inProgressCount,
     required this.doneCount,
     required this.items,
+    this.sprintId,
   });
 
   final String title;
@@ -145,6 +204,7 @@ class BacklogGroup {
   final int inProgressCount;
   final int doneCount;
   final List<IssueSummary> items;
+  final int? sprintId;
 }
 
 class SpaceAvatarSpec {

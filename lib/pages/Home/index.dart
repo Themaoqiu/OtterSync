@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
+import 'package:ottersync/components/Common/PageHeader.dart';
 import 'package:ottersync/components/Common/SectionHeader.dart';
-import 'package:ottersync/components/Common/UserAvatar.dart';
 import 'package:ottersync/components/Common/demo_feedback.dart';
 import 'package:ottersync/components/Home/HomeActivitySwitcher.dart';
 import 'package:ottersync/components/Home/HomeAiCreateCard.dart';
 import 'package:ottersync/components/Home/HomeOverviewCard.dart';
 import 'package:ottersync/components/Home/QuickAccessSection.dart';
 import 'package:ottersync/components/Home/RecentProjectsCard.dart';
+import 'package:ottersync/state/shell_scope.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
 import 'package:ottersync/viewmodels/work_item_api.dart';
@@ -50,37 +51,19 @@ class _HomeViewState extends State<HomeView> {
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  InkWell(
-                    onTap: () => context.push('/account'),
-                    borderRadius: BorderRadius.circular(999),
-                    child: const UserAvatar(label: 'MT'),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: SizedBox.shrink(),
-                  ),
-                  IconButton(
-                    onPressed: () => context.push('/create-work-item'),
-                    icon: Icon(
-                      Icons.add_rounded,
-                      color: palette.primary,
-                      size: 30,
-                    ),
-                    tooltip: '创建工作项目',
-                  ),
-                ],
-              ),
-            ],
-          ),
+        PageHeader(
+          actions: [
+            HeaderIconButton(
+              icon: Icons.add_rounded,
+              emphasized: true,
+              tooltip: '创建工作项目',
+              onPressed: () => context.push('/create-work-item'),
+            ),
+          ],
         ),
         Expanded(
-          child: ListView(
+          child: PageFadeSlide(
+            child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
             children: [
                   SectionHeader(
@@ -178,7 +161,7 @@ class _HomeViewState extends State<HomeView> {
                                 items: _buildQuickAccessItems(),
                                 onItemTap: (item) {
                                   if (item.route != null) {
-                                    context.push(item.route!);
+                                    navigateOrSwitchTab(context, item.route!);
                                     return;
                                   }
                                   showDemoFeedback(context, '${item.title} 交互入口已预留。');
@@ -196,13 +179,6 @@ class _HomeViewState extends State<HomeView> {
                   ),
                   if (_activityMode == HomeActivityMode.viewed) ...[
                     const SizedBox(height: 18),
-                    Text(
-                      '今天',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: palette.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
                     if (_loading)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 32),
@@ -220,31 +196,7 @@ class _HomeViewState extends State<HomeView> {
                         ),
                       )
                     else
-                      RecentProjectsCard(
-                        items: _buildViewedDisplayItems().take(2).toList(growable: false),
-                        onItemTap: (item) {
-                          if (item.id != null) {
-                            context.push('/work-item/${item.id}');
-                          }
-                        },
-                      ),
-                    const SizedBox(height: 18),
-                    Text(
-                      '四月',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: palette.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    if (_viewedItems.length > 2)
-                      RecentProjectsCard(
-                        items: _buildViewedDisplayItems().skip(2).take(4).toList(growable: false),
-                        onItemTap: (item) {
-                          if (item.id != null) {
-                            context.push('/work-item/${item.id}');
-                          }
-                        },
-                      ),
+                      ..._buildViewedSections(theme, palette),
                   ] else ...[
                     const SizedBox(height: 18),
                     if (_loading)
@@ -268,7 +220,7 @@ class _HomeViewState extends State<HomeView> {
                         items: _dynamicItems,
                         onItemTap: (item) {
                           if (item.id != null) {
-                            context.push('/work-item/${item.id}');
+                            context.push('/work-item/${item.id}', extra: item);
                           }
                         },
                       ),
@@ -276,6 +228,7 @@ class _HomeViewState extends State<HomeView> {
                 ],
               ),
             ),
+          ),
           ],
         );
   }
@@ -352,9 +305,9 @@ class _HomeViewState extends State<HomeView> {
     final items = <QuickAccessItem>[
       ..._quickAccessItems,
       const QuickAccessItem(
-        title: '我的工作',
+        title: '我的待处理工作项',
         subtitle: '筛选器',
-        icon: Icons.filter_alt_outlined,
+        icon: Icons.inbox_rounded,
         color: Color(0xFFD8E7FF),
         iconTint: Color(0xFF0C66E4),
         route: '/all-work',
@@ -368,10 +321,10 @@ class _HomeViewState extends State<HomeView> {
     final wideItem = items.first;
     final compactItems = items.skip(1).toList(growable: true);
     compactItems.sort((left, right) {
-      if (left.title == '我的工作') {
+      if (left.title == '我的待处理工作项') {
         return -1;
       }
-      if (right.title == '我的工作') {
+      if (right.title == '我的待处理工作项') {
         return 1;
       }
       return 0;
@@ -379,38 +332,108 @@ class _HomeViewState extends State<HomeView> {
     return [wideItem, ...compactItems];
   }
 
-  List<IssueSummary> _buildViewedDisplayItems() {
-    final items = <IssueSummary>[
-      const IssueSummary(
-        title: '我的打开事务',
-        key: 'FILTER',
-        subtitle: '筛选器 · 已查看',
-        icon: Icons.filter_alt_outlined,
-        iconBackgroundColor: Color(0xFFD8E7FF),
-        iconColor: Color(0xFF0C66E4),
-      ),
-      ..._viewedItems.map(
-        (item) => IssueSummary(
-          id: item.id,
-          title: item.title,
-          key: item.key,
-          subtitle: item.subtitle == null
-              ? '已查看'
-              : '${item.subtitle} · 已查看',
-          status: item.status,
-          assigneeInitials: item.assigneeInitials,
-          icon: item.icon,
-          iconBackgroundColor: item.iconBackgroundColor,
-          iconColor: item.iconColor,
-          statusKey: item.statusKey,
-          bucket: item.bucket,
-          workspaceId: item.workspaceId,
-          startDate: item.startDate,
-          dueDate: item.dueDate,
+  List<Widget> _buildViewedSections(ThemeData theme, AppPalette palette) {
+    const filter = IssueSummary(
+      title: '我的待处理工作项',
+      key: 'FILTER',
+      subtitle: '筛选器 · 已查看',
+      icon: Icons.inbox_rounded,
+      iconBackgroundColor: Color(0xFFD8E7FF),
+      iconColor: Color(0xFF0C66E4),
+    );
+
+    DateTime? viewedTime(IssueSummary i) => i.lastViewedAt ?? i.createdAt;
+
+    final sorted = [..._viewedItems]..sort((a, b) {
+        final ta = viewedTime(a);
+        final tb = viewedTime(b);
+        if (ta == null && tb == null) return 0;
+        if (ta == null) return 1;
+        if (tb == null) return -1;
+        return tb.compareTo(ta);
+      });
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final weekStart = today.subtract(Duration(days: today.weekday - 1));
+
+    final groups = <String, List<IssueSummary>>{};
+    final order = <String>[];
+    void put(String label, IssueSummary item) {
+      if (!groups.containsKey(label)) {
+        groups[label] = [];
+        order.add(label);
+      }
+      groups[label]!.add(item);
+    }
+
+    String monthLabel(DateTime d) {
+      const names = [
+        '一月', '二月', '三月', '四月', '五月', '六月',
+        '七月', '八月', '九月', '十月', '十一月', '十二月',
+      ];
+      final m = names[d.month - 1];
+      return d.year == now.year ? m : '${d.year} 年 $m';
+    }
+
+    for (final item in sorted) {
+      final t = viewedTime(item);
+      if (t == null) {
+        put('更早', item);
+        continue;
+      }
+      final day = DateTime(t.year, t.month, t.day);
+      if (day == today) {
+        put('今天', item);
+      } else if (day == today.subtract(const Duration(days: 1))) {
+        put('昨天', item);
+      } else if (!day.isBefore(weekStart)) {
+        put('本周', item);
+      } else {
+        put(monthLabel(t), item);
+      }
+    }
+
+    final widgets = <Widget>[];
+    void appendCard(List<IssueSummary> items) {
+      final mapped = items
+          .map(
+            (item) => item.copyWith(
+              subtitle: item.subtitle == null
+                  ? '已查看'
+                  : '${item.subtitle} · 已查看',
+            ),
+          )
+          .toList(growable: false);
+      widgets.add(
+        RecentProjectsCard(
+          items: mapped,
+          onItemTap: (item) {
+            if (item.id != null) {
+              context.push('/work-item/${item.id}', extra: item);
+            }
+          },
         ),
-      ),
-    ];
-    return items;
+      );
+    }
+
+    bool firstSection = true;
+    for (final label in order) {
+      if (!firstSection) widgets.add(const SizedBox(height: 18));
+      firstSection = false;
+      widgets.add(Text(
+        label,
+        style: theme.textTheme.titleMedium?.copyWith(color: palette.textPrimary),
+      ));
+      widgets.add(const SizedBox(height: 10));
+      if (label == order.first) {
+        appendCard([filter, ...groups[label]!]);
+      } else {
+        appendCard(groups[label]!);
+      }
+    }
+
+    return widgets;
   }
 }
 

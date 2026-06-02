@@ -42,6 +42,7 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
   List<LookupOption> _teams = const [];
   List<LookupOption> _labels = const [];
   List<LookupOption> _parentItems = const [];
+  List<LookupOption> _sprintOptions = const [];
   final List<AttachmentCreateRequest> _attachments = [];
   final Set<int> _selectedLabelIds = <int>{};
 
@@ -51,6 +52,7 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
   LookupOption? _selectedAssignee;
   LookupOption? _selectedTeam;
   LookupOption? _selectedParent;
+  LookupOption? _selectedSprint;
   DateTime? _startDate;
   DateTime? _dueDate;
 
@@ -80,7 +82,7 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
         child: Column(
           children: [
             Padding(
-              padding: AppSpace.pagePadding,
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
               child: CreateWorkItemTopBar(
                 saving: _saving,
                 onClose: () => context.pop(),
@@ -109,10 +111,14 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
                           workType: _selectedWorkType,
                           workspaces: _workspaces,
                           workTypes: _workTypes,
-                          onWorkspaceChanged: (value) => setState(() {
-                            _selectedWorkspace = value;
-                            _selectedParent = null;
-                          }),
+                          onWorkspaceChanged: (value) {
+                            setState(() {
+                              _selectedWorkspace = value;
+                              _selectedParent = null;
+                              _selectedSprint = null;
+                            });
+                            _loadSprintOptions();
+                          },
                           onWorkTypeChanged: (value) => setState(() {
                             _selectedWorkType = value;
                           }),
@@ -175,6 +181,7 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
                           assignee: _selectedAssignee,
                           team: _selectedTeam,
                           parent: _selectedParent,
+                          sprint: _selectedSprint,
                           startDate: _startDate,
                           dueDate: _dueDate,
                           selectedLabelCount: _selectedLabelIds.length,
@@ -225,6 +232,22 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
                               setState(() => _selectedTeam = result);
                             }
                           },
+                          onPickSprint: () async {
+                            if (_selectedWorkspace == null) {
+                              _showSnackBar('请先选择空间');
+                              return;
+                            }
+                            final result = await _pickLookup(
+                              title: '选择冲刺',
+                              options: _sprintOptions,
+                              selected: _selectedSprint,
+                              allowClear: true,
+                              emptyLabel: '当前空间暂无冲刺，可前往空间内创建',
+                            );
+                            if (result != _selectedSprint) {
+                              setState(() => _selectedSprint = result);
+                            }
+                          },
                           onPickStartDate: () => _pickDate(
                             initial: _startDate,
                             onPicked: (value) => setState(() => _startDate = value),
@@ -265,6 +288,7 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
         _loading = false;
       });
       await _loadParentItems();
+      await _loadSprintOptions();
     } catch (error) {
       debugPrint('CreateWorkItemPage load failed: $error');
       if (!mounted) {
@@ -297,6 +321,29 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
     }
   }
 
+  Future<void> _loadSprintOptions() async {
+    final workspace = _selectedWorkspace;
+    if (workspace == null) {
+      setState(() => _sprintOptions = const []);
+      return;
+    }
+    try {
+      final sprints = await _api.listSprints(workspaceId: workspace.id);
+      if (!mounted) {
+        return;
+      }
+      setState(() => _sprintOptions = sprints
+          .where((sprint) => sprint.status != SprintStatus.completed)
+          .map((sprint) => sprint.toLookup())
+          .toList(growable: false));
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _sprintOptions = const []);
+    }
+  }
+
   Future<void> _submit() async {
     final summary = _summaryController.text.trim();
     if (summary.isEmpty) {
@@ -324,6 +371,7 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
           assigneeId: _selectedAssignee?.id,
           parentId: _selectedParent?.id,
           teamId: _selectedTeam?.id,
+          sprintId: _selectedSprint?.id,
           dueDate: _dueDate,
           startDate: _startDate,
           labelIds: _selectedLabelIds.toList(),
