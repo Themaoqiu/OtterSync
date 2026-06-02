@@ -14,6 +14,11 @@ migrate_working_dir/
 .env
 auth.json
 
+# Claude Code / agent assets
+CLAUDE.md
+.claude/
+skills/
+
 # IntelliJ related
 *.iml
 *.ipr
