@@ -51,6 +51,15 @@ class AuthController extends ChangeNotifier {
     await _authService.signOut();
   }
 
+  Future<void> updateDisplayName(String name) async {
+    final user = _authService.currentUser;
+    if (user == null) return;
+    await user.updateDisplayName(name);
+    await user.reload();
+    _user = _authService.currentUser;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _authSubscription.cancel();

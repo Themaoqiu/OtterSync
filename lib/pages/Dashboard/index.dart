@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ottersync/components/Common/AppSurface.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
 import 'package:ottersync/components/Common/PageHeader.dart';
-import 'package:ottersync/components/Common/SheetHeader.dart';
-import 'package:ottersync/components/Common/demo_feedback.dart';
 import 'package:ottersync/components/Dashboard/AssignedIssuesCard.dart';
 import 'package:ottersync/components/Dashboard/DashboardActivityCard.dart';
-import 'package:ottersync/components/Dashboard/DashboardFeedbackCard.dart';
-import 'package:ottersync/theme/design_tokens.dart';
+import 'package:ottersync/components/Dashboard/StatsGrid.dart';
+import 'package:ottersync/state/auth_controller.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
 import 'package:ottersync/viewmodels/work_item_api.dart';
 
@@ -25,8 +22,10 @@ class _DashboardViewState extends State<DashboardView> {
   late final WorkItemApi _api;
   List<IssueSummary> _issues = const [];
   List<DashboardActivityItem> _activities = const [];
+  List<IssueSummary> _allItems = const [];
   bool _loading = true;
   String? _error;
+  DateTime? _lastSyncedAt;
 
   @override
   void initState() {
@@ -37,130 +36,14 @@ class _DashboardViewState extends State<DashboardView> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = AppThemePalette.of(context);
-
     return Column(
       children: [
         const PageHeader(title: '仪表板'),
         Expanded(
           child: PageFadeSlide(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
-              children: [
-        AppSurface(
-          padding: const EdgeInsets.all(0),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
-            onTap: () => showModalBottomSheet(
-              context: context,
-              showDragHandle: true,
-              builder: (ctx) => SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SheetHeader(title: '选择仪表板'),
-                    ListTile(
-                      title: const Text('默认仪表板'),
-                      leading: Icon(
-                        Icons.dashboard_rounded,
-                        color: palette.primary,
-                      ),
-                      trailing: Icon(
-                        Icons.check_rounded,
-                        color: palette.primary,
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text(
-                        '暂无其他仪表板',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text('默认仪表板', style: theme.textTheme.titleMedium),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: palette.surfaceInset,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: palette.textSecondary,
-                      size: 24,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (_loading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (_error != null)
-          AppSurface(child: Text(_error!, style: theme.textTheme.bodyMedium))
-        else if (_issues.isEmpty && _activities.isEmpty)
-          const SizedBox(
-            height: 480,
-            child: EmptyStateView(
-              icon: Icons.dashboard_outlined,
-              title: '还没有仪表板数据',
-              description: '当数据库里有真实任务活动后，这里会展示分配给我和活动流。',
-            ),
-          )
-        else ...[
-          if (_issues.isNotEmpty)
-            AssignedIssuesCard(
-              issues: _issues,
-              onIssueTap: (item) {
-                if (item.id != null) {
-                  context.push('/work-item/${item.id}');
-                }
-              },
-            ),
-          if (_issues.isNotEmpty) const SizedBox(height: 24),
-          if (_activities.isNotEmpty)
-            DashboardActivityCard(
-              activities: _activities,
-              onActivityTap: (item) =>
-                  showDemoFeedback(context, '将打开 ${item.issue} 的活动详情。'),
-            ),
-        ],
-        const SizedBox(height: 24),
-        DashboardFeedbackCard(
-          onTap: () async {
-            try {
-              await _api.submitFeedback(
-                targetType: 'dashboard',
-                targetId: 'widget_request',
-                type: 'like',
-              );
-              if (context.mounted) {
-                showDemoFeedback(context, '感谢您的反馈！');
-              }
-            } catch (e) {
-              if (context.mounted) {
-                showDemoFeedback(context, '反馈提交失败：$e');
-              }
-            }
-          },
-        ),
-              ],
+            child: RefreshIndicator(
+              onRefresh: _loadDashboardData,
+              child: _buildBody(),
             ),
           ),
         ),
@@ -168,30 +51,180 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
+  Widget _buildBody() {
+    if (_loading) {
+      return ListView(
+        padding: const EdgeInsets.symmetric(vertical: 80),
+        children: const [
+          Center(child: CircularProgressIndicator()),
+        ],
+      );
+    }
+    if (_error != null) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 112),
+        children: [
+          EmptyStateView(
+            icon: Icons.cloud_off_rounded,
+            title: '加载失败',
+            description: _error!,
+          ),
+        ],
+      );
+    }
+    if (_issues.isEmpty && _activities.isEmpty && _allItems.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 112),
+        children: const [
+          SizedBox(
+            height: 480,
+            child: EmptyStateView(
+              icon: Icons.dashboard_outlined,
+              title: '还没有仪表板数据',
+              description: '当数据库里有真实任务活动后，这里会展示概览与活动流。',
+            ),
+          ),
+        ],
+      );
+    }
+
+    final stats = _buildStats();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
+      children: [
+        StatsGrid(stats: stats),
+        const SizedBox(height: 16),
+        AssignedIssuesCard(
+          issues: _issues,
+          onIssueTap: (item) {
+            if (item.id != null) {
+              context.push('/work-item/${item.id}', extra: item);
+            }
+          },
+          lastSyncedLabel: _relativeLabel(_lastSyncedAt),
+          onRefresh: _loadDashboardData,
+        ),
+        const SizedBox(height: 16),
+        DashboardActivityCard(
+          activities: _activities,
+          userInitials: _userInitials(),
+          onActivityTap: (item) {
+            // 活动里嵌入了 work item key，跳转到它的详情页
+            final id = _activityWorkItemId(item);
+            if (id != null) {
+              context.push('/work-item/$id');
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  List<DashboardStat> _buildStats() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final assigned = _issues.length;
+    final inProgress = _allItems
+        .where((i) => i.statusKey == WorkItemStatus.inProgress)
+        .length;
+    final dueSoon = _allItems.where((i) {
+      final due = i.dueDate;
+      if (due == null) return false;
+      final dueDay = DateTime(due.year, due.month, due.day);
+      final diff = dueDay.difference(today).inDays;
+      return diff >= 0 &&
+          diff <= 3 &&
+          i.statusKey != WorkItemStatus.done;
+    }).length;
+    final completedThisWeek = _allItems.where((i) {
+      if (i.statusKey != WorkItemStatus.done) return false;
+      final created = i.createdAt;
+      if (created == null) return false;
+      return now.difference(created).inDays <= 7;
+    }).length;
+
+    return [
+      DashboardStat(
+        label: '分配给我',
+        value: assigned,
+        icon: Icons.assignment_ind_rounded,
+        color: const Color(0xFF1F5DBD),
+      ),
+      DashboardStat(
+        label: '进行中',
+        value: inProgress,
+        icon: Icons.timelapse_rounded,
+        color: const Color(0xFF8E4BC3),
+      ),
+      DashboardStat(
+        label: '即将到期',
+        value: dueSoon,
+        icon: Icons.event_rounded,
+        color: const Color(0xFFE56910),
+      ),
+      DashboardStat(
+        label: '本周已完成',
+        value: completedThisWeek,
+        icon: Icons.check_circle_rounded,
+        color: const Color(0xFF1F8B4C),
+      ),
+    ];
+  }
+
+  int? _activityWorkItemId(DashboardActivityItem item) {
+    // DashboardActivityItem 里没有显式 id，但是 issue (key) 可以反查
+    // 主键无法纯客户端推断；这里就回到所有工作流后续可以扩展。
+    final match = _allItems.firstWhere(
+      (e) => e.key == item.issue,
+      orElse: () => const IssueSummary(title: '', key: ''),
+    );
+    return match.id;
+  }
+
+  String _userInitials() {
+    final auth = AuthScope.of(context);
+    final name = auth.displayName.isEmpty ? 'MT' : auth.displayName;
+    final initials = name.characters.take(2).toString().toUpperCase();
+    return initials.isEmpty ? 'MT' : initials;
+  }
+
+  String _relativeLabel(DateTime? value) {
+    if (value == null) return '点击刷新';
+    final diff = DateTime.now().difference(value);
+    if (diff.inSeconds < 30) return '刚刚同步';
+    if (diff.inMinutes < 1) return '${diff.inSeconds} 秒前';
+    if (diff.inHours < 1) return '${diff.inMinutes} 分钟前';
+    if (diff.inDays < 1) return '${diff.inHours} 小时前';
+    return '${diff.inDays} 天前';
+  }
+
   Future<void> _loadDashboardData() async {
     setState(() {
-      _loading = true;
+      _loading = _lastSyncedAt == null;
       _error = null;
     });
     try {
-      final issues = await _api.loadAssignedIssues();
-      final activities = await _api.loadDashboardActivities();
-      if (!mounted) {
-        return;
-      }
+      final results = await Future.wait([
+        _api.loadAssignedIssues(),
+        _api.loadDashboardActivities(),
+        _api.loadViewedItems(limit: 100),
+      ]);
+      if (!mounted) return;
       setState(() {
-        _issues = issues;
-        _activities = activities;
+        _issues = results[0] as List<IssueSummary>;
+        _activities = results[1] as List<DashboardActivityItem>;
+        _allItems = results[2] as List<IssueSummary>;
         _loading = false;
+        _lastSyncedAt = DateTime.now();
       });
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _error = '$error';
         _loading = false;
       });
     }
   }
+
 }

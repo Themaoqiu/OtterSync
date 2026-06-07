@@ -154,7 +154,7 @@ class _HomeViewState extends State<HomeView> {
                           Column(
                             children: [
                               HomeAiCreateCard(
-                                onTap: () => showDemoFeedback(context, 'AI 创建工作项入口已恢复，上传图像流程待接入。'),
+                                onTap: () => context.push('/ai-chat'),
                               ),
                               const SizedBox(height: 14),
                               QuickAccessSection(

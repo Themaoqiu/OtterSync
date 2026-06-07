@@ -36,7 +36,6 @@ class _SpacesViewState extends State<SpacesView> {
   @override
   Widget build(BuildContext context) {
     final palette = AppThemePalette.of(context);
-    final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: palette.scaffold,
@@ -79,26 +78,6 @@ class _SpacesViewState extends State<SpacesView> {
                   ),
                   const SizedBox(height: 16),
                   ..._buildAllSpacesSection(context),
-                  const SizedBox(height: 24),
-                  AppSurface(
-                    color: palette.surfaceInset,
-                    border: Border.all(color: Colors.transparent),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline_rounded, color: palette.textSecondary),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            '这里展示的空间全部来自 Firestore，创建后会立即出现在列表中。',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: palette.textSecondary,
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
               ),

@@ -9,10 +9,12 @@ class DashboardActivityCard extends StatelessWidget {
     super.key,
     required this.activities,
     required this.onActivityTap,
+    required this.userInitials,
   });
 
   final List<DashboardActivityItem> activities;
   final ValueChanged<DashboardActivityItem> onActivityTap;
+  final String userInitials;
 
   @override
   Widget build(BuildContext context) {
@@ -23,87 +25,83 @@ class DashboardActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('活动流', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 12),
-          Text('今天', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 12),
-          ...activities.asMap().entries.map(
-            (entry) => Column(
-              children: [
-                InkWell(
-                  onTap: () => onActivityTap(entry.value),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            children: [
+              Expanded(
+                child: Text('活动流', style: theme.textTheme.titleMedium),
+              ),
+              Text(
+                '近期',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: palette.textSecondary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (activities.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: Center(
+                child: Text(
+                  '暂无新活动',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: palette.textSecondary),
+                ),
+              ),
+            )
+          else
+            ...activities.asMap().entries.map(
+                  (entry) => Column(
                     children: [
-                      const UserAvatar(label: 'MT'),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            RichText(
-                              text: TextSpan(
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: palette.textPrimary,
-                                  height: 1.45,
-                                ),
-                                children: [
-                                  const TextSpan(
-                                    text: 'maoqiu The ',
-                                    style: TextStyle(),
-                                  ),
-                                  TextSpan(
-                                    text: entry.value.text.replaceFirst(
-                                      'maoqiu The ',
-                                      '',
+                      InkWell(
+                        onTap: () => onActivityTap(entry.value),
+                        borderRadius: BorderRadius.circular(AppSpace.radius),
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              UserAvatar(label: userInitials, size: 32),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      entry.value.text,
+                                      style: theme.textTheme.bodyLarge
+                                          ?.copyWith(height: 1.4),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.access_time_rounded,
+                                          color: palette.textTertiary,
+                                          size: 14,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          entry.value.time,
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              entry.value.issue,
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.task_alt_rounded,
-                                  color: palette.primary,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  entry.value.time,
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                              ],
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
+                      if (entry.key != activities.length - 1)
+                        Divider(
+                            height: 1, color: palette.divider, indent: 44),
                     ],
                   ),
                 ),
-                if (entry.key != activities.length - 1) ...[
-                  const SizedBox(height: 12),
-                  Divider(color: palette.divider, indent: 50),
-                  const SizedBox(height: 12),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Icon(Icons.sync_rounded, color: palette.primary),
-              const SizedBox(width: 8),
-              Text('刚刚', style: theme.textTheme.bodyMedium),
-            ],
-          ),
         ],
       ),
     );

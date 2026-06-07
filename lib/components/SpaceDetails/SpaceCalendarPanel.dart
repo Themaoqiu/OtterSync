@@ -57,6 +57,20 @@ class SpaceCalendarPanel extends StatelessWidget {
             ),
           );
         },
+        markerBuilder: (context, day, events) {
+          if (events.isEmpty) return const SizedBox.shrink();
+          final eventsForDay = events.take(3).toList();
+          return Padding(
+            padding: const EdgeInsets.only(top: 30),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final raw in eventsForDay)
+                  _EventMark(item: raw, day: day, palette: palette),
+              ],
+            ),
+          );
+        },
       ),
       headerStyle: HeaderStyle(
         formatButtonVisible: false,
@@ -102,18 +116,86 @@ class SpaceCalendarPanel extends StatelessWidget {
           color: Colors.white,
           fontWeight: FontWeight.w600,
         ),
-        markerDecoration: BoxDecoration(
-          color: palette.primary,
-          shape: BoxShape.circle,
-        ),
-        markersMaxCount: 3,
       ),
     );
   }
 
+  static const _rangeColor = Color(0xFF8E4BC3);
+  static const _pointColor = Color(0xFF1F5DBD);
+
   List<IssueSummary> _eventsForDay(DateTime day) {
-    return items
-        .where((item) => item.dueDate != null && isSameDay(item.dueDate!, day))
-        .toList(growable: false);
+    final target = DateTime(day.year, day.month, day.day);
+    return items.where((item) {
+      final start = item.startDate;
+      final due = item.dueDate;
+      if (start == null && due == null) return false;
+      final from = start == null
+          ? DateTime(due!.year, due.month, due.day)
+          : DateTime(start.year, start.month, start.day);
+      final to = due == null
+          ? DateTime(start!.year, start.month, start.day)
+          : DateTime(due.year, due.month, due.day);
+      return !target.isBefore(from) && !target.isAfter(to);
+    }).toList(growable: false);
   }
+}
+
+class _EventMark extends StatelessWidget {
+  const _EventMark({
+    required this.item,
+    required this.day,
+    required this.palette,
+  });
+
+  final IssueSummary item;
+  final DateTime day;
+  final AppPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final start = item.startDate;
+    final due = item.dueDate;
+    final hasRange = start != null && due != null && !_isSameDay(start, due);
+
+    if (!hasRange) {
+      return Container(
+        width: 6,
+        height: 6,
+        margin: const EdgeInsets.symmetric(vertical: 1),
+        decoration: const BoxDecoration(
+          color: SpaceCalendarPanel._pointColor,
+          shape: BoxShape.circle,
+        ),
+      );
+    }
+
+    final target = DateTime(day.year, day.month, day.day);
+    final from = DateTime(start.year, start.month, start.day);
+    final to = DateTime(due.year, due.month, due.day);
+    final isStart = _isSameDay(target, from);
+    final isEnd = _isSameDay(target, to);
+    final radiusLeft = isStart ? const Radius.circular(3) : Radius.zero;
+    final radiusRight = isEnd ? const Radius.circular(3) : Radius.zero;
+
+    return Container(
+      width: double.infinity,
+      height: 4,
+      margin: EdgeInsets.only(
+        top: 2,
+        bottom: 1,
+        left: isStart ? 4 : 0,
+        right: isEnd ? 4 : 0,
+      ),
+      decoration: BoxDecoration(
+        color: SpaceCalendarPanel._rangeColor,
+        borderRadius: BorderRadius.horizontal(
+          left: radiusLeft,
+          right: radiusRight,
+        ),
+      ),
+    );
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 }

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
-import 'package:ottersync/components/Common/IssueListTile.dart';
+import 'package:ottersync/components/Common/DatePickerSheet.dart';
 import 'package:ottersync/components/Common/SheetHeader.dart';
 import 'package:ottersync/components/Common/work_type_icon.dart';
 import 'package:ottersync/components/SpaceDetails/SpaceCalendarPanel.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
-import 'package:table_calendar/table_calendar.dart';
 
 enum _CalendarFilterKind { workType, status, assignee, priority }
 
@@ -20,8 +19,12 @@ class CalendarTabView extends StatefulWidget {
 
   final List<IssueSummary> items;
   final void Function(IssueSummary item) onItemTap;
-  final Future<void> Function(IssueSummary item, DateTime date)
-      onScheduleItem;
+  // dueDate=null 表示清除安排
+  final Future<void> Function(
+    IssueSummary item,
+    DateTime? startDate,
+    DateTime? dueDate,
+  ) onScheduleItem;
 
   @override
   State<CalendarTabView> createState() => _CalendarTabViewState();
@@ -115,14 +118,10 @@ class _CalendarTabViewState extends State<CalendarTabView> {
                 )
               else
                 ..._scheduledItems.map(
-                  (item) => InkWell(
+                  (item) => _ScheduledItemRow(
+                    item: item,
                     onTap: () => widget.onItemTap(item),
-                    child: IssueListTile(
-                      title: item.title,
-                      subtitle: '${item.key} · ${item.subtitle ?? ''}',
-                      status: item.status,
-                      avatar: item.assigneeInitials,
-                    ),
+                    onEditSchedule: () => _scheduleTo(item),
                   ),
                 ),
             ],
@@ -150,14 +149,10 @@ class _CalendarTabViewState extends State<CalendarTabView> {
                 )
               else
                 ..._unscheduledItems.map(
-                  (item) => InkWell(
+                  (item) => _ScheduledItemRow(
+                    item: item,
                     onTap: () => _scheduleTo(item),
-                    child: IssueListTile(
-                      title: item.title,
-                      subtitle: '${item.key} · 点击安排到 ${_selectedDay.month}/${_selectedDay.day}',
-                      status: item.status,
-                      avatar: item.assigneeInitials,
-                    ),
+                    onEditSchedule: () => _scheduleTo(item),
                   ),
                 ),
             ],
@@ -168,7 +163,51 @@ class _CalendarTabViewState extends State<CalendarTabView> {
   }
 
   Future<void> _scheduleTo(IssueSummary item) async {
-    await widget.onScheduleItem(item, _selectedDay);
+    final hasExisting = item.startDate != null || item.dueDate != null;
+    if (hasExisting) {
+      // 已安排：先弹一个小 sheet 让用户选择"修改 / 清除"
+      final palette = AppThemePalette.of(context);
+      final action = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        builder: (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SheetHeader(title: '安排时间'),
+              ListTile(
+                leading: Icon(Icons.edit_calendar_rounded,
+                    color: palette.primary),
+                title: const Text('修改时间'),
+                onTap: () => Navigator.pop(ctx, 'edit'),
+              ),
+              ListTile(
+                leading: Icon(Icons.event_busy_rounded,
+                    color: palette.danger),
+                title: const Text('清除安排'),
+                onTap: () => Navigator.pop(ctx, 'clear'),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      );
+      if (action == null) return;
+      if (action == 'clear') {
+        await widget.onScheduleItem(item, null, null);
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    final result = await showDatePickerSheet(
+      context,
+      title: '安排时间',
+      initialStart: item.startDate,
+      initialEnd: item.dueDate ?? _selectedDay,
+    );
+    if (result == null) return;
+    await widget.onScheduleItem(item, result.start, result.end);
   }
 
   Widget _filterChip(_CalendarFilterKind kind, String label, bool active) {
@@ -351,17 +390,171 @@ class _CalendarTabViewState extends State<CalendarTabView> {
       widget.items.where(_passesFilters).toList(growable: false);
 
   List<IssueSummary> get _scheduledItems {
-    return _filteredItems
-        .where(
-          (item) =>
-              item.dueDate != null && isSameDay(item.dueDate!, _selectedDay),
-        )
-        .toList(growable: false);
+    final target = DateTime(
+      _selectedDay.year,
+      _selectedDay.month,
+      _selectedDay.day,
+    );
+    return _filteredItems.where((item) {
+      final start = item.startDate;
+      final due = item.dueDate;
+      if (start == null && due == null) return false;
+      final from = start == null
+          ? DateTime(due!.year, due.month, due.day)
+          : DateTime(start.year, start.month, start.day);
+      final to = due == null
+          ? DateTime(start!.year, start.month, start.day)
+          : DateTime(due.year, due.month, due.day);
+      return !target.isBefore(from) && !target.isAfter(to);
+    }).toList(growable: false);
   }
 
   List<IssueSummary> get _unscheduledItems {
     return _filteredItems
-        .where((item) => item.dueDate == null)
+        .where((item) => item.dueDate == null && item.startDate == null)
         .toList(growable: false);
   }
+}
+
+class _ScheduledItemRow extends StatelessWidget {
+  const _ScheduledItemRow({
+    required this.item,
+    required this.onTap,
+    required this.onEditSchedule,
+  });
+
+  final IssueSummary item;
+  final VoidCallback onTap;
+  final VoidCallback onEditSchedule;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppThemePalette.of(context);
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppSpace.radius),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            WorkTypeIconBadge(title: item.workTypeTitle, size: 30),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(item.key, style: theme.textTheme.bodySmall),
+                      const SizedBox(width: 8),
+                      _ScheduleBadge(
+                        startDate: item.startDate,
+                        dueDate: item.dueDate,
+                        onTap: onEditSchedule,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right_rounded,
+                color: palette.textSecondary, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScheduleBadge extends StatelessWidget {
+  const _ScheduleBadge({
+    required this.startDate,
+    required this.dueDate,
+    this.onTap,
+  });
+
+  final DateTime? startDate;
+  final DateTime? dueDate;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppThemePalette.of(context);
+    final theme = Theme.of(context);
+
+    final hasRange = startDate != null && dueDate != null;
+    final hasAny = startDate != null || dueDate != null;
+    if (!hasAny) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: palette.surfaceInset,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_rounded,
+                  size: 14, color: palette.textSecondary),
+              const SizedBox(width: 4),
+              Text(
+                '安排时间',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: palette.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final color = hasRange
+        ? const Color(0xFF8E4BC3)
+        : const Color(0xFF1F5DBD);
+    final icon = hasRange ? Icons.date_range_rounded : Icons.event_rounded;
+    final label = hasRange
+        ? '${_fmt(startDate!)} ~ ${_fmt(dueDate!)}'
+        : _fmt(dueDate ?? startDate!);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _fmt(DateTime d) => '${d.month}/${d.day}';
 }

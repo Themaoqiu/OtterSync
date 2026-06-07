@@ -424,24 +424,57 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
   }
 
   Future<void> _scheduleItemDueDate(
-      IssueSummary item, DateTime date) async {
+      IssueSummary item, DateTime? startDate, DateTime? dueDate) async {
     if (item.id == null) return;
-    final updated = item.copyWith(dueDate: date);
+    final clearing = startDate == null && dueDate == null;
+    // copyWith 无法把字段重置为 null，这里直接重建以确保本地状态与服务端一致。
+    final patched = IssueSummary(
+      id: item.id,
+      title: item.title,
+      key: item.key,
+      subtitle: item.subtitle,
+      status: item.status,
+      assigneeInitials: item.assigneeInitials,
+      icon: item.icon,
+      iconBackgroundColor: item.iconBackgroundColor,
+      iconColor: item.iconColor,
+      statusKey: item.statusKey,
+      bucket: item.bucket,
+      workspaceId: item.workspaceId,
+      sprintId: item.sprintId,
+      priority: item.priority,
+      workTypeId: item.workTypeId,
+      workTypeTitle: item.workTypeTitle,
+      lastViewedAt: item.lastViewedAt,
+      createdAt: item.createdAt,
+      startDate: clearing ? null : startDate,
+      dueDate: clearing ? null : dueDate,
+    );
     setState(() {
       _allItems = _allItems
-          .map((i) => i.id == item.id ? updated : i)
+          .map((i) => i.id == item.id ? patched : i)
           .toList(growable: false);
       _calendarItems = _allItems;
       _boardItems = _boardItems
-          .map((i) => i.id == item.id ? updated : i)
+          .map((i) => i.id == item.id ? patched : i)
           .toList(growable: false);
     });
     try {
-      await _api.updateWorkItemDueDate(item.id!, date);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已安排到 ${date.month}/${date.day}')),
+      await _api.updateWorkItemFields(
+        item.id!,
+        startDate: startDate,
+        clearStartDate: startDate == null,
+        dueDate: dueDate,
+        clearDueDate: dueDate == null,
       );
+      if (!mounted) return;
+      final msg = clearing
+          ? '已取消安排'
+          : startDate == null
+              ? '已安排到 ${dueDate!.month}/${dueDate.day}'
+              : '已安排 ${startDate.month}/${startDate.day} ~ ${dueDate!.month}/${dueDate.day}';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(msg)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)

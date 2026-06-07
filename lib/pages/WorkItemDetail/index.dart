@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
+import 'package:ottersync/components/Common/DatePickerSheet.dart';
 import 'package:ottersync/components/Common/SheetHeader.dart';
 import 'package:ottersync/components/Common/work_type_icon.dart';
 import 'package:ottersync/theme/design_tokens.dart';
@@ -500,31 +501,33 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
   }
 
   Future<void> _pickDueDate() async {
-    final initial = _item!.dueDate ?? DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(initial.year - 2),
-      lastDate: DateTime(initial.year + 5),
+    final start = _item!.startDate;
+    final result = await showDatePickerSheet(
+      context,
+      title: '选择截止日期',
+      initialEnd: _item!.dueDate ?? start ?? DateTime.now(),
+      minDate: start,
+      allowRange: false,
     );
-    if (picked == null) return;
-    await _api.updateWorkItemFields(_item!.id, dueDate: picked);
+    if (result?.end == null) return;
+    await _api.updateWorkItemFields(_item!.id, dueDate: result!.end);
     if (!mounted) return;
-    _patch(dueDate: picked);
+    _patch(dueDate: result.end);
   }
 
   Future<void> _pickStartDate() async {
-    final initial = _item!.startDate ?? DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(initial.year - 2),
-      lastDate: DateTime(initial.year + 5),
+    final due = _item!.dueDate;
+    final result = await showDatePickerSheet(
+      context,
+      title: '选择开始日期',
+      initialEnd: _item!.startDate ?? due ?? DateTime.now(),
+      maxDate: due,
+      allowRange: false,
     );
-    if (picked == null) return;
-    await _api.updateWorkItemFields(_item!.id, startDate: picked);
+    if (result?.end == null) return;
+    await _api.updateWorkItemFields(_item!.id, startDate: result!.end);
     if (!mounted) return;
-    _patch(startDate: picked);
+    _patch(startDate: result.end);
   }
 
   Future<T?> _pickFromList<T>({
@@ -900,6 +903,13 @@ class _DetailBlock extends StatelessWidget {
             onTap: onEditSprint,
           ),
           _EditableRow(
+            label: '开始日期',
+            value: item.startDate == null
+                ? '未设置'
+                : _fmt(item.startDate!),
+            onTap: onEditStartDate,
+          ),
+          _EditableRow(
             label: '截止日期',
             value: item.dueDate == null
                 ? '未设置'
@@ -910,13 +920,6 @@ class _DetailBlock extends StatelessWidget {
             label: 'Team',
             value: item.team?.title ?? '无',
             onTap: onEditTeam,
-          ),
-          _EditableRow(
-            label: '开始日期',
-            value: item.startDate == null
-                ? '未设置'
-                : _fmt(item.startDate!),
-            onTap: onEditStartDate,
           ),
         ],
       ),

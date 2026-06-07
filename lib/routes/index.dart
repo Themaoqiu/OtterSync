@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ottersync/pages/Account/index.dart';
+import 'package:ottersync/pages/AiChat/index.dart';
+import 'package:ottersync/pages/Settings/index.dart';
 import 'package:ottersync/pages/AllWork/index.dart';
 import 'package:ottersync/pages/BootstrapError/index.dart';
 import 'package:ottersync/pages/CreateWorkItem/index.dart';
 import 'package:ottersync/pages/Dashboard/index.dart';
 import 'package:ottersync/pages/Home/index.dart';
 import 'package:ottersync/pages/Login/index.dart';
+import 'package:ottersync/pages/Login/sign_in.dart';
 import 'package:ottersync/pages/Main/index.dart';
 import 'package:ottersync/pages/Notifications/index.dart';
 import 'package:ottersync/pages/Register/index.dart';
@@ -273,6 +276,7 @@ final GoRouter _rootRouter = GoRouter(
   redirect: (context, state) {
     final isLoggedIn = _authController.isLoggedIn;
     final isAuthRoute = state.matchedLocation == '/login' ||
+        state.matchedLocation == '/sign-in' ||
         state.matchedLocation == '/register';
     final isBootstrapRoute = state.matchedLocation == '/bootstrap-error';
 
@@ -285,6 +289,10 @@ final GoRouter _rootRouter = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginPage(),
+    ),
+    GoRoute(
+      path: '/sign-in',
+      builder: (context, state) => const SignInPage(),
     ),
     GoRoute(
       path: '/register',
@@ -338,6 +346,8 @@ final GoRouter _rootRouter = GoRouter(
       ],
     ),
     GoRoute(path: '/account', builder: (context, state) => const AccountView()),
+    GoRoute(path: '/settings', builder: (context, state) => const SettingsView()),
+    GoRoute(path: '/ai-chat', builder: (context, state) => const AiChatView()),
     GoRoute(
       path: '/space-details',
       builder: (context, state) => const SpaceDetailsView(),

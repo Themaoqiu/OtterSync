@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
 import 'package:ottersync/components/Common/PageHeader.dart';
-import 'package:ottersync/state/theme_controller.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
 import 'package:ottersync/viewmodels/work_item_api.dart';
@@ -34,22 +33,10 @@ class _NotificationsViewState extends State<NotificationsView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = AppThemePalette.of(context);
-    final themeController = ThemeControllerScope.of(context);
 
     return Column(
       children: [
-        PageHeader(
-          title: '通知',
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Switch(
-                value: themeController.isDarkMode,
-                onChanged: (_) => themeController.toggle(),
-              ),
-            ),
-          ],
-        ),
+        const PageHeader(title: '通知'),
         Expanded(
           child: PageFadeSlide(
             child: ListView(
@@ -118,15 +105,6 @@ class _NotificationsViewState extends State<NotificationsView> {
               ),
             ),
           ),
-        AppSurface(
-          color: palette.surfaceInset,
-          child: Text(
-            themeController.isDarkMode
-                ? '当前为深色模式。切换开关后，所有页面会同步切换到浅色模式。'
-                : '当前为浅色模式。切换开关后，所有页面会同步切换到深色模式。',
-            style: theme.textTheme.bodyMedium,
-          ),
-        ),
               ],
             ),
           ),
