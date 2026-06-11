@@ -63,8 +63,11 @@ class _HomeViewState extends State<HomeView> {
         ),
         Expanded(
           child: PageFadeSlide(
-            child: ListView(
+            child: RefreshIndicator(
+              onRefresh: _loadHomeData,
+              child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
+            physics: const AlwaysScrollableScrollPhysics(),
             children: [
                   SectionHeader(
                     title: '今日概述',
@@ -134,22 +137,8 @@ class _HomeViewState extends State<HomeView> {
                     child: Column(
                       children: [
                         const SizedBox(height: 16),
-                        if (_loading)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 32),
-                            child: Center(child: CircularProgressIndicator()),
-                          )
-                        else if (_error != null)
+                        if (_error != null)
                           _buildErrorState()
-                        else if (_quickAccessItems.isEmpty)
-                          const SizedBox(
-                            height: 380,
-                            child: EmptyStateView(
-                              icon: Icons.bolt_outlined,
-                              title: '还没有快速访问内容',
-                              description: '创建真实空间或任务后，这里会自动生成快捷入口。',
-                            ),
-                          )
                         else
                           Column(
                             children: [
@@ -188,7 +177,7 @@ class _HomeViewState extends State<HomeView> {
                       _buildErrorState()
                     else if (_viewedItems.isEmpty)
                       const SizedBox(
-                        height: 220,
+                        height: 360,
                         child: EmptyStateView(
                           icon: Icons.history_outlined,
                           title: '还没有已查看工作项',
@@ -208,7 +197,7 @@ class _HomeViewState extends State<HomeView> {
                       _buildErrorState()
                     else if (_dynamicItems.isEmpty)
                       const SizedBox(
-                        height: 220,
+                        height: 360,
                         child: EmptyStateView(
                           icon: Icons.bolt_outlined,
                           title: '最近两三天还没有新动态',
@@ -228,6 +217,7 @@ class _HomeViewState extends State<HomeView> {
                 ],
               ),
             ),
+          ),
           ),
           ],
         );
@@ -302,8 +292,7 @@ class _HomeViewState extends State<HomeView> {
   }
 
   List<QuickAccessItem> _buildQuickAccessItems() {
-    final items = <QuickAccessItem>[
-      ..._quickAccessItems,
+    return <QuickAccessItem>[
       const QuickAccessItem(
         title: '我的待处理工作项',
         subtitle: '筛选器',
@@ -312,24 +301,8 @@ class _HomeViewState extends State<HomeView> {
         iconTint: Color(0xFF0C66E4),
         route: '/all-work',
       ),
+      ..._quickAccessItems,
     ];
-
-    if (items.length <= 1) {
-      return items;
-    }
-
-    final wideItem = items.first;
-    final compactItems = items.skip(1).toList(growable: true);
-    compactItems.sort((left, right) {
-      if (left.title == '我的待处理工作项') {
-        return -1;
-      }
-      if (right.title == '我的待处理工作项') {
-        return 1;
-      }
-      return 0;
-    });
-    return [wideItem, ...compactItems];
   }
 
   List<Widget> _buildViewedSections(ThemeData theme, AppPalette palette) {

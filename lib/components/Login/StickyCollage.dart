@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 enum _StickyIcon { triangle, dots, equals, circle, arrow, square, check, plus }
 
-/// 登录页中间的九宫格手绘便签拼贴（橙 / 绿 / 紫）。
 class StickyCollage extends StatelessWidget {
   const StickyCollage({super.key});
 

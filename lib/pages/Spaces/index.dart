@@ -61,8 +61,11 @@ class _SpacesViewState extends State<SpacesView> {
             ),
             Expanded(
               child: PageFadeSlide(
-                child: ListView(
+                child: RefreshIndicator(
+                  onRefresh: _loadSpaces,
+                  child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
+                physics: const AlwaysScrollableScrollPhysics(),
                 children: [
                   const SizedBox(height: 8),
                   const SectionHeader(
@@ -79,6 +82,7 @@ class _SpacesViewState extends State<SpacesView> {
                   const SizedBox(height: 16),
                   ..._buildAllSpacesSection(context),
                 ],
+              ),
               ),
               ),
             ),

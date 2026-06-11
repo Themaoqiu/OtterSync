@@ -70,8 +70,11 @@ class _AllWorkViewState extends State<AllWorkView> {
         ),
         Expanded(
           child: PageFadeSlide(
-            child: ListView(
+            child: RefreshIndicator(
+              onRefresh: _loadWorkItems,
+              child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
+              physics: const AlwaysScrollableScrollPhysics(),
               children: [
         AllWorkToolbar(
           selectedFilter: _selectedFilter,
@@ -187,6 +190,7 @@ class _AllWorkViewState extends State<AllWorkView> {
                 ),
               ],
             ),
+          ),
           ),
         ),
       ],

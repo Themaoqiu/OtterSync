@@ -1,85 +1,203 @@
-rules_version='2'
+rules_version='2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper: request is from an authenticated user
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Helper: document belongs to the current user
-    function isOwner(uid) {
-      return request.auth.uid == uid;
+    function currentEmail() {
+      return request.auth.token.email_lower != null
+        ? request.auth.token.email_lower
+        : request.auth.token.email;
     }
 
-    // Helper: request document has required string fields
     function hasRequiredStrings(fields) {
       return request.resource.data.keys().hasAll(fields)
-        && fields.every(f, request.resource.data[f] is string && request.resource.data[f].size() > 0);
+        && fields.every(field,
+          request.resource.data[field] is string
+          && request.resource.data[field].size() > 0);
     }
 
-    // _meta: authenticated users can read, only server/admin can write
+    function workspacePath(workspaceId) {
+      return /databases/$(database)/documents/workspaces/$(workspaceId);
+    }
+
+    function workspaceExists(workspaceId) {
+      return exists(workspacePath(workspaceId));
+    }
+
+    function workspaceData(workspaceId) {
+      return get(workspacePath(workspaceId)).data;
+    }
+
+    function canAccessWorkspaceData(data) {
+      return isSignedIn()
+        && (
+          data.ownerUid == request.auth.uid
+          || request.auth.uid in data.memberUids
+        );
+    }
+
+    function canAccessWorkspace(workspaceId) {
+      return workspaceExists(workspaceId)
+        && canAccessWorkspaceData(workspaceData(workspaceId));
+    }
+
+    function ownsWorkspace(workspaceId) {
+      return workspaceExists(workspaceId)
+        && workspaceData(workspaceId).ownerUid == request.auth.uid;
+    }
+
+    function validWorkspaceCreate() {
+      return hasRequiredStrings(['title', 'subtitle', 'ownerUid'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.memberUids is list
+        && request.auth.uid in request.resource.data.memberUids
+        && request.resource.data.invitedEmails is list;
+    }
+
+    function acceptsWorkspaceInvite() {
+      return currentEmail() in resource.data.invitedEmails
+        && !(request.auth.uid in resource.data.memberUids)
+        && request.auth.uid in request.resource.data.memberUids
+        && !(currentEmail() in request.resource.data.invitedEmails)
+        && request.resource.data.ownerUid == resource.data.ownerUid;
+    }
+
+    function declinesWorkspaceInvite() {
+      return currentEmail() in resource.data.invitedEmails
+        && !(currentEmail() in request.resource.data.invitedEmails)
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.memberUids == resource.data.memberUids;
+    }
+
     match /_meta/{doc} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if false;
     }
 
-    // users: authenticated users can read all, only write their own
-    match /users/{uid} {
+    match /users/{doc} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && isOwner(uid)
-        && hasRequiredStrings(['uid', 'username', 'email'])
-        && request.resource.data['uid'] == request.auth.uid;
-      allow update: if isSignedIn() && isOwner(uid);
-      allow delete: if isSignedIn() && isOwner(uid);
+      allow create, update: if isSignedIn()
+        && (
+          doc == request.auth.uid
+          || request.resource.data.uid == request.auth.uid
+        );
+      allow delete: if isSignedIn()
+        && (
+          doc == request.auth.uid
+          || resource.data.uid == request.auth.uid
+        );
     }
 
-    // Shared resources: workspaces, workTypes, teams, labels
-    // All authenticated users can read and write (collaboration model)
     match /workspaces/{doc} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn()
-        && hasRequiredStrings(['title', 'subtitle']);
-      allow update, delete: if isSignedIn();
+      allow get, list: if canAccessWorkspaceData(resource.data);
+      allow create: if isSignedIn() && validWorkspaceCreate();
+      allow update: if isSignedIn()
+        && (
+          (
+            resource.data.ownerUid == request.auth.uid
+            && request.resource.data.ownerUid == resource.data.ownerUid
+          )
+          || acceptsWorkspaceInvite()
+          || declinesWorkspaceInvite()
+        );
+      allow delete: if isSignedIn()
+        && resource.data.ownerUid == request.auth.uid;
     }
 
-    match /workTypes/{doc} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /teams/{doc} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /labels/{doc} {
-      allow read, write: if isSignedIn();
-    }
-
-    // Work items: authenticated users have full access (team collaboration)
     match /workItems/{doc} {
-      allow read: if isSignedIn();
+      allow get, list: if canAccessWorkspace(resource.data.workspaceId);
       allow create: if isSignedIn()
+        && request.resource.data.createdBy == request.auth.uid
         && hasRequiredStrings(['summary', 'key'])
-        && request.resource.data['createdBy'] == request.auth.uid;
-      allow update, delete: if isSignedIn();
+        && canAccessWorkspace(request.resource.data.workspaceId);
+      allow update: if isSignedIn()
+        && canAccessWorkspace(resource.data.workspaceId)
+        && request.resource.data.workspaceId == resource.data.workspaceId;
+      allow delete: if isSignedIn()
+        && ownsWorkspace(resource.data.workspaceId);
     }
 
-    // Feedback: users can read all, create their own, delete their own
+    match /sprints/{doc} {
+      allow get, list: if canAccessWorkspace(resource.data.workspaceId);
+      allow create: if isSignedIn()
+        && request.resource.data.workspaceId is int
+        && canAccessWorkspace(request.resource.data.workspaceId);
+      allow update: if isSignedIn()
+        && canAccessWorkspace(resource.data.workspaceId)
+        && request.resource.data.workspaceId == resource.data.workspaceId;
+      allow delete: if isSignedIn()
+        && canAccessWorkspace(resource.data.workspaceId);
+    }
+
+    match /notifications/{doc} {
+      allow get, list: if isSignedIn()
+        && resource.data.recipientUid == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.senderUid == request.auth.uid
+        && request.resource.data.recipientUid is string
+        && canAccessWorkspace(request.resource.data.workspaceId);
+      allow update: if isSignedIn()
+        && resource.data.recipientUid == request.auth.uid
+        && request.resource.data.recipientUid == resource.data.recipientUid;
+      allow delete: if isSignedIn()
+        && resource.data.recipientUid == request.auth.uid;
+    }
+
+    match /workspaceInvites/{doc} {
+      allow get, list: if isSignedIn()
+        && resource.data.invitedEmail == currentEmail();
+      allow create: if isSignedIn()
+        && request.resource.data.inviterUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && ownsWorkspace(request.resource.data.workspaceId);
+      allow update: if isSignedIn()
+        && resource.data.invitedEmail == currentEmail()
+        && resource.data.status == 'pending'
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.invitedEmail == resource.data.invitedEmail
+        && request.resource.data.status in ['accepted', 'declined'];
+      allow delete: if false;
+    }
+
     match /feedback/{doc} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.type in ['like', 'dislike'];
-      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
       allow update: if false;
     }
 
-    // Recent views: users manage their own records
-    match /recentViews/{id} {
+    match /recentViews/{doc} {
+      allow read: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+      allow create, update: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    match /workTypes/{doc} {
       allow read: if isSignedIn();
       allow create, update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow delete: if false;
+    }
+
+    match /teams/{doc} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if false;
+    }
+
+    match /labels/{doc} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if false;
     }
   }
 }

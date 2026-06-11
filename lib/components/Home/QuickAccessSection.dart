@@ -16,142 +16,79 @@ class QuickAccessSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppThemePalette.of(context);
-    final wideItem = items.first;
-    final compactItems = items.skip(1).toList();
 
     return Column(
       children: [
-        InkWell(
-          onTap: () => onItemTap(wideItem),
-          child: AppSurface(
-            margin: const EdgeInsets.only(bottom: 14),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              children: [
-                _FeatureIcon(
-                  icon: wideItem.icon,
-                  color: wideItem.color,
-                  iconTint: wideItem.iconTint,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        wideItem.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: palette.textPrimary,
-                          fontSize: 17,
-                          height: 1.1,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        wideItem.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: palette.textSecondary,
-                          fontSize: 13,
-                          height: 1.15,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (wideItem.badge != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: wideItem.color,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      wideItem.badge!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+        for (int i = 0; i < items.length; i += 2) ...[
+          if (i > 0) const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(child: _compactCard(context, palette, items[i])),
+              const SizedBox(width: 14),
+              if (i + 1 < items.length)
+                Expanded(child: _compactCard(context, palette, items[i + 1]))
+              else
+                const Expanded(child: SizedBox.shrink()),
+            ],
           ),
-        ),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            mainAxisExtent: 68,
-          ),
-          itemCount: compactItems.length,
-          itemBuilder: (context, index) {
-            final item = compactItems[index];
-            return InkWell(
-              onTap: () => onItemTap(item),
-              borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
-              child: AppSurface(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                child: Row(
-                  children: [
-                    _FeatureIcon(
-                      icon: item.icon,
-                      color: item.color,
-                      iconTint: item.iconTint,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: palette.textPrimary,
-                              fontSize: 17,
-                              height: 1.1,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            item.subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: palette.textSecondary,
-                              fontSize: 13,
-                              height: 1.15,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+        ],
       ],
     );
   }
 
+  Widget _compactCard(
+    BuildContext context,
+    AppPalette palette,
+    QuickAccessItem item,
+  ) {
+    return InkWell(
+      onTap: () => onItemTap(item),
+      borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
+      child: AppSurface(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            _FeatureIcon(
+              icon: item.icon,
+              color: item.color,
+              iconTint: item.iconTint,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: palette.textPrimary,
+                      fontSize: 17,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: palette.textSecondary,
+                      fontSize: 13,
+                      height: 1.15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _FeatureIcon extends StatelessWidget {

@@ -264,7 +264,7 @@ final AuthController _authController = AuthController()
   ..addListener(() {
     final uid = _authController.user?.uid;
     if (uid != null) {
-      WorkItemApi.init(uid: uid);
+      WorkItemApi.init(uid: uid, email: _authController.user?.email);
     } else {
       WorkItemApi.clear();
     }

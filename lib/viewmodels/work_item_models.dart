@@ -109,11 +109,48 @@ class WorkspaceCreateRequest {
     required this.name,
     required this.key,
     required this.template,
+    this.invitedEmails = const [],
   });
 
   final String name;
   final String key;
   final String template;
+  final List<String> invitedEmails;
+}
+
+class WorkspaceInvite {
+  const WorkspaceInvite({
+    required this.id,
+    required this.workspaceId,
+    required this.workspaceName,
+    required this.workspaceKey,
+    required this.inviterUid,
+    required this.invitedEmail,
+    required this.status,
+    this.createdAt,
+  });
+
+  factory WorkspaceInvite.fromMap(Map<String, dynamic> map) {
+    return WorkspaceInvite(
+      id: map['id'] as String? ?? '',
+      workspaceId: (map['workspaceId'] as num).toInt(),
+      workspaceName: map['workspaceName'] as String? ?? '',
+      workspaceKey: map['workspaceKey'] as String? ?? '',
+      inviterUid: map['inviterUid'] as String? ?? '',
+      invitedEmail: map['invitedEmail'] as String? ?? '',
+      status: map['status'] as String? ?? 'pending',
+      createdAt: _dateTimeOrNull(map['createdAt']),
+    );
+  }
+
+  final String id;
+  final int workspaceId;
+  final String workspaceName;
+  final String workspaceKey;
+  final String inviterUid;
+  final String invitedEmail;
+  final String status;
+  final DateTime? createdAt;
 }
 
 class WorkItemResponse {

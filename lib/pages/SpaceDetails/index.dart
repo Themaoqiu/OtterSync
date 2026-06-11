@@ -160,7 +160,9 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
       priorityCounts[p] = (priorityCounts[p] ?? 0) + 1;
     }
 
-    return TabBarView(
+    return RefreshIndicator(
+      onRefresh: _loadSpaceDetails,
+      child: TabBarView(
       controller: _tabController,
       children: [
         SummaryTabView(
@@ -208,8 +210,12 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
           sprints: _sprints,
           items: _allItems,
         ),
-        SettingsTabView(space: _space!),
+        SettingsTabView(
+          space: _space!,
+          onInviteMember: _inviteMember,
+        ),
       ],
+      ),
     );
   }
 
@@ -573,6 +579,54 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
         ),
       ),
     );
+  }
+
+  Future<void> _inviteMember() async {
+    if (_space == null) return;
+    final controller = TextEditingController();
+    final email = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('邀请成员'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+            labelText: '成员邮箱',
+            hintText: 'member@example.com',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('邀请'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (email == null || email.isEmpty) return;
+
+    try {
+      await _api.inviteWorkspaceMember(
+        workspaceId: _space!.id,
+        email: email,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已邀请 $email')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('邀请失败：$error')),
+      );
+    }
   }
 
   Future<void> _loadSpaceDetails() async {

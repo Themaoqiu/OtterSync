@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
+import 'package:ottersync/viewmodels/workspace_access.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
 
 class WorkItemApiException implements Exception {
@@ -13,24 +14,33 @@ class WorkItemApiException implements Exception {
 }
 
 class WorkItemApi {
-  WorkItemApi({FirebaseFirestore? firestore, String? currentUid})
+  WorkItemApi({
+    FirebaseFirestore? firestore,
+    String? currentUid,
+    String? currentEmail,
+  })
     : _firestore = firestore ?? FirebaseFirestore.instance,
-      _currentUid = currentUid ?? _defaultUid;
+      _currentUid = currentUid ?? _defaultUid,
+      _currentEmail = currentEmail ?? _defaultEmail;
 
   final FirebaseFirestore _firestore;
   final String? _currentUid;
+  final String? _currentEmail;
 
   static String? _defaultUid;
+  static String? _defaultEmail;
 
   /// Sets the default UID for all WorkItemApi instances.
   /// Called once after authentication is confirmed.
-  static void init({required String uid}) {
+  static void init({required String uid, String? email}) {
     _defaultUid = uid;
+    _defaultEmail = _normalizeEmail(email);
   }
 
   /// Clears the default UID on sign-out.
   static void clear() {
     _defaultUid = null;
+    _defaultEmail = null;
   }
 
   static const _metaCollection = '_meta';
@@ -41,29 +51,33 @@ class WorkItemApi {
   static const _labelsCollection = 'labels';
   static const _workItemsCollection = 'workItems';
   static const _sprintsCollection = 'sprints';
+  static const _workspaceInvitesCollection = 'workspaceInvites';
   static const _feedbackCollectionName = 'feedback';
   CollectionReference get _feedbackCollection =>
       _firestore.collection(_feedbackCollectionName);
   CollectionReference get _recentViewsCollection =>
       _firestore.collection('recentViews');
+  CollectionReference get _notificationsCollection =>
+      _firestore.collection('notifications');
 
   Future<List<JiraSpace>> listSpaces() async {
     return _guard(() async {
       await _ensureSeedData();
-      final snapshot = await _firestore.collection(_workspacesCollection).orderBy('id').get();
-      final workItemSnapshot = await _firestore.collection(_workItemsCollection).get();
+      final workspaceMaps = await _loadVisibleWorkspaceMaps();
+      final visibleWorkspaceIds = workspaceMaps
+          .map((data) => (data['id'] as num?)?.toInt())
+          .whereType<int>()
+          .toSet();
       final counts = <int, int>{};
 
-      for (final doc in workItemSnapshot.docs) {
-        final data = doc.data();
+      for (final data in await _loadWorkItemMaps()) {
         final workspaceId = (data['workspaceId'] as num?)?.toInt();
-        if (workspaceId != null) {
+        if (workspaceId != null && visibleWorkspaceIds.contains(workspaceId)) {
           counts.update(workspaceId, (value) => value + 1, ifAbsent: () => 1);
         }
       }
 
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
+      return workspaceMaps.map((data) {
         final id = (data['id'] as num).toInt();
         return JiraSpace(
           id: id,
@@ -114,6 +128,12 @@ class WorkItemApi {
         'title': record.name,
         'subtitle': record.key,
         'template': record.template,
+        'ownerUid': _requireCurrentUid(),
+        'memberUids': [_requireCurrentUid()],
+        'invitedEmails': payload.invitedEmails
+            .map(_normalizeEmail)
+            .whereType<String>()
+            .toList(growable: false),
         'avatarSeed': '$key$name',
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -130,6 +150,9 @@ class WorkItemApi {
       if (!snapshot.exists || data == null) {
         return null;
       }
+      if (!_canAccessWorkspace(data)) {
+        throw const WorkItemApiException('你没有访问该空间的权限。');
+      }
       final count = await _countWorkspaceItems(id);
       return JiraSpace(
         id: (data['id'] as num).toInt(),
@@ -142,6 +165,146 @@ class WorkItemApi {
               '${data['subtitle'] as String? ?? ''}${data['title'] as String? ?? ''}',
         ),
       );
+    });
+  }
+
+  Future<void> inviteWorkspaceMember({
+    required int workspaceId,
+    required String email,
+  }) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final normalizedEmail = _normalizeEmail(email);
+      if (normalizedEmail == null) {
+        throw const WorkItemApiException('请输入有效的邀请邮箱。');
+      }
+
+      final workspaceRef = _firestore.collection(_workspacesCollection).doc('$workspaceId');
+      final workspaceSnapshot = await workspaceRef.get();
+      final workspace = workspaceSnapshot.data();
+      if (!workspaceSnapshot.exists || workspace == null) {
+        throw const WorkItemApiException('空间不存在。');
+      }
+      if (workspace['ownerUid'] != _requireCurrentUid()) {
+        throw const WorkItemApiException('只有空间创建者可以邀请成员。');
+      }
+
+      final existingInvite = await _firestore
+          .collection(_workspaceInvitesCollection)
+          .where('workspaceId', isEqualTo: workspaceId)
+          .where('invitedEmail', isEqualTo: normalizedEmail)
+          .where('status', isEqualTo: 'pending')
+          .limit(1)
+          .get();
+      if (existingInvite.docs.isNotEmpty) {
+        throw const WorkItemApiException('该成员已有待处理邀请。');
+      }
+
+      final inviteRef = _firestore.collection(_workspaceInvitesCollection).doc();
+      await workspaceRef.update({
+        'invitedEmails': FieldValue.arrayUnion([normalizedEmail]),
+      });
+      await inviteRef.set({
+        'id': inviteRef.id,
+        'workspaceId': workspaceId,
+        'workspaceName': workspace['title'] as String? ?? '',
+        'workspaceKey': workspace['subtitle'] as String? ?? '',
+        'inviterUid': _requireCurrentUid(),
+        'invitedEmail': normalizedEmail,
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  Future<List<WorkspaceInvite>> listPendingWorkspaceInvites() async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final email = _currentEmail;
+      if (email == null || email.isEmpty) {
+        return const [];
+      }
+
+      final snapshot = await _firestore
+          .collection(_workspaceInvitesCollection)
+          .where('invitedEmail', isEqualTo: email)
+          .where('status', isEqualTo: 'pending')
+          .get();
+      final invites = snapshot.docs
+          .map((doc) => WorkspaceInvite.fromMap(Map<String, dynamic>.from(doc.data())))
+          .toList(growable: false);
+      invites.sort((left, right) {
+        final leftDate = left.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final rightDate = right.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return rightDate.compareTo(leftDate);
+      });
+      return invites;
+    });
+  }
+
+  Future<void> acceptWorkspaceInvite(String inviteId) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final inviteRef = _firestore.collection(_workspaceInvitesCollection).doc(inviteId);
+      final inviteSnapshot = await inviteRef.get();
+      final inviteData = inviteSnapshot.data();
+      if (!inviteSnapshot.exists || inviteData == null) {
+        throw const WorkItemApiException('邀请不存在。');
+      }
+      final invite = WorkspaceInvite.fromMap(Map<String, dynamic>.from(inviteData));
+      if (invite.invitedEmail != _currentEmail || invite.status != 'pending') {
+        throw const WorkItemApiException('邀请不存在或已处理。');
+      }
+
+      final uid = _requireCurrentUid();
+      final workspaceRef = _firestore.collection(_workspacesCollection).doc('${invite.workspaceId}');
+      final batch = _firestore.batch();
+      batch.update(workspaceRef, {
+        'memberUids': FieldValue.arrayUnion([uid]),
+        'invitedEmails': FieldValue.arrayRemove([invite.invitedEmail]),
+      });
+      batch.update(inviteRef, {
+        'status': 'accepted',
+        'acceptedByUid': uid,
+        'respondedAt': FieldValue.serverTimestamp(),
+      });
+      await batch.commit();
+
+      await _createNotification(
+        recipientUid: uid,
+        title: '你已加入新空间',
+        description: '${invite.workspaceKey} · ${invite.workspaceName}',
+        route: '/space-details/${invite.workspaceId}',
+        workspaceId: invite.workspaceId,
+      );
+    });
+  }
+
+  Future<void> declineWorkspaceInvite(String inviteId) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      final inviteRef = _firestore.collection(_workspaceInvitesCollection).doc(inviteId);
+      final inviteSnapshot = await inviteRef.get();
+      final inviteData = inviteSnapshot.data();
+      if (!inviteSnapshot.exists || inviteData == null) {
+        throw const WorkItemApiException('邀请不存在。');
+      }
+      final invite = WorkspaceInvite.fromMap(Map<String, dynamic>.from(inviteData));
+      if (invite.invitedEmail != _currentEmail || invite.status != 'pending') {
+        throw const WorkItemApiException('邀请不存在或已处理。');
+      }
+
+      final workspaceRef = _firestore.collection(_workspacesCollection).doc('${invite.workspaceId}');
+      final batch = _firestore.batch();
+      batch.update(inviteRef, {
+        'status': 'declined',
+        'declinedByUid': _requireCurrentUid(),
+        'respondedAt': FieldValue.serverTimestamp(),
+      });
+      batch.update(workspaceRef, {
+        'invitedEmails': FieldValue.arrayRemove([invite.invitedEmail]),
+      });
+      await batch.commit();
     });
   }
 
@@ -192,7 +355,11 @@ class WorkItemApi {
       final doc =
           await _firestore.collection(_workItemsCollection).doc('$id').get();
       if (!doc.exists) return null;
-      return WorkItemResponse.fromMap(doc.data() as Map<String, dynamic>);
+      final data = Map<String, dynamic>.from(doc.data() as Map);
+      await _ensureCanAccessWorkspaceId(
+        (data['workspaceId'] as num?)?.toInt(),
+      );
+      return WorkItemResponse.fromMap(data);
     });
   }
 
@@ -285,6 +452,7 @@ class WorkItemApi {
   }) async {
     return _guard(() async {
       await _ensureSeedData();
+      await _ensureCanEditWorkItem(id);
       final patch = <String, dynamic>{};
       if (summary != null) patch['summary'] = summary;
       if (description != null) patch['description'] = description;
@@ -335,6 +503,11 @@ class WorkItemApi {
       patch['updatedAt'] = FieldValue.serverTimestamp();
       if (patch.length == 1) return; // only updatedAt
       await _firestore.collection(_workItemsCollection).doc('$id').update(patch);
+      await _notifyWorkItemParticipants(
+        id,
+        title: '工作项已更新',
+        descriptionPrefix: '字段发生变化',
+      );
     });
   }
 
@@ -342,10 +515,16 @@ class WorkItemApi {
   Future<void> updateWorkItemDueDate(int id, DateTime? dueDate) async {
     return _guard(() async {
       await _ensureSeedData();
+      await _ensureCanEditWorkItem(id);
       await _firestore.collection(_workItemsCollection).doc('$id').update({
         'dueDate': dueDate,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      await _notifyWorkItemParticipants(
+        id,
+        title: '工作项日期已变更',
+        descriptionPrefix: '截止日期发生变化',
+      );
     });
   }
 
@@ -353,10 +532,16 @@ class WorkItemApi {
   Future<void> updateWorkItemStatus(int id, WorkItemStatus status) async {
     return _guard(() async {
       await _ensureSeedData();
+      await _ensureCanEditWorkItem(id);
       await _firestore.collection(_workItemsCollection).doc('$id').update({
         'status': status.name,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      await _notifyWorkItemParticipants(
+        id,
+        title: '工作项状态已变更',
+        descriptionPrefix: '状态更新为 ${workItemStatusLabel(status)}',
+      );
     });
   }
 
@@ -368,6 +553,7 @@ class WorkItemApi {
   }) async {
     return _guard(() async {
       await _ensureSeedData();
+      await _ensureCanEditWorkItem(workItemId);
       final docId = '${_currentUid}_$workItemId';
       await _recentViewsCollection.doc(docId).set({
         'userId': _currentUid,
@@ -442,17 +628,64 @@ class WorkItemApi {
   Future<List<NotificationItem>> loadNotifications({int limit = 6}) async {
     return _guard(() async {
       await _ensureSeedData();
-      final items = await _loadWorkItemMaps(limit: limit);
-      return items.map((data) {
-        final key = data['key'] as String? ?? '';
-        final summary = data['summary'] as String? ?? '';
-        return NotificationItem(
-          title: '工作项有新动态',
-          description: '$key · $summary',
-          route: '/all-work',
-          workItemId: (data['id'] as num?)?.toInt(),
-        );
-      }).toList(growable: false);
+      final uid = _requireCurrentUid();
+      final snapshot = await _notificationsCollection
+          .where('recipientUid', isEqualTo: uid)
+          .get();
+      final notifications = snapshot.docs
+          .map((doc) => Map<String, dynamic>.from(doc.data() as Map))
+          .where((data) => shouldNotifyUser(data, uid: uid))
+          .toList(growable: false);
+      notifications.sort((left, right) {
+        final leftDate = _asDateTime(left['createdAt']);
+        final rightDate = _asDateTime(right['createdAt']);
+        return (rightDate ?? DateTime.fromMillisecondsSinceEpoch(0))
+            .compareTo(leftDate ?? DateTime.fromMillisecondsSinceEpoch(0));
+      });
+      return notifications
+          .take(limit)
+          .map((data) => NotificationItem(
+                title: data['title'] as String? ?? '通知',
+                description: data['description'] as String? ?? '',
+                route: data['route'] as String?,
+                workItemId: (data['workItemId'] as num?)?.toInt(),
+              ))
+          .toList(growable: false);
+    });
+  }
+
+  /// 实时订阅当前用户的通知。
+  ///
+  /// 通过 Firestore [snapshots] 监听 notifications 集合，
+  /// 服务端写入新事件后会自动推送到客户端，无需轮询或手动刷新。
+  Stream<List<NotificationItem>> watchNotifications({int limit = 30}) {
+    final uid = _currentUid;
+    if (uid == null || uid.isEmpty) {
+      return Stream.value(const []);
+    }
+    return _notificationsCollection
+        .where('recipientUid', isEqualTo: uid)
+        .snapshots()
+        .map((snapshot) {
+      final notifications = snapshot.docs
+          .map((doc) => Map<String, dynamic>.from(doc.data() as Map))
+          .where((data) => shouldNotifyUser(data, uid: uid))
+          .toList(growable: false);
+      notifications.sort((left, right) {
+        final leftDate = _asDateTime(left['createdAt']);
+        final rightDate = _asDateTime(right['createdAt']);
+        return (rightDate ?? DateTime.fromMillisecondsSinceEpoch(0))
+            .compareTo(leftDate ?? DateTime.fromMillisecondsSinceEpoch(0));
+      });
+      return notifications
+          .take(limit)
+          .map((data) => NotificationItem(
+                title: data['title'] as String? ?? '通知',
+                description: data['description'] as String? ?? '',
+                route: data['route'] as String?,
+                workItemId: (data['workItemId'] as num?)?.toInt(),
+              ))
+          .toList(growable: false);
     });
   }
 
@@ -507,15 +740,24 @@ class WorkItemApi {
   Future<List<Sprint>> listSprints({int? workspaceId}) async {
     return _guard(() async {
       await _ensureSeedData();
-      final snapshot = await _firestore
-          .collection(_sprintsCollection)
-          .orderBy('id')
-          .get();
-      return snapshot.docs
-          .map((doc) => Sprint.fromMap(Map<String, dynamic>.from(doc.data())))
-          .where((sprint) =>
-              workspaceId == null || sprint.workspaceId == workspaceId)
-          .toList(growable: false);
+      final visibleWorkspaceIds = workspaceId == null
+          ? await _visibleWorkspaceIds()
+          : {workspaceId};
+      if (workspaceId != null) {
+        await _ensureCanAccessWorkspaceId(workspaceId);
+      }
+
+      final sprints = <Sprint>[];
+      for (final id in visibleWorkspaceIds) {
+        final snapshot = await _firestore
+            .collection(_sprintsCollection)
+            .where('workspaceId', isEqualTo: id)
+            .get();
+        sprints.addAll(snapshot.docs
+            .map((doc) => Sprint.fromMap(Map<String, dynamic>.from(doc.data()))));
+      }
+      sprints.sort((left, right) => left.id.compareTo(right.id));
+      return sprints;
     });
   }
 
@@ -527,7 +769,9 @@ class WorkItemApi {
       if (!snapshot.exists || snapshot.data() == null) {
         return null;
       }
-      return Sprint.fromMap(Map<String, dynamic>.from(snapshot.data()!));
+      final sprint = Sprint.fromMap(Map<String, dynamic>.from(snapshot.data()!));
+      await _ensureCanAccessWorkspaceId(sprint.workspaceId);
+      return sprint;
     });
   }
 
@@ -538,7 +782,7 @@ class WorkItemApi {
       if (name.isEmpty) {
         throw const WorkItemApiException('请输入冲刺名称。');
       }
-      await _loadLookupById(_workspacesCollection, payload.workspaceId, 'workspace');
+      await _ensureCanAccessWorkspaceId(payload.workspaceId);
       final id = await _nextId('sprints');
       final sprint = Sprint(
         id: id,
@@ -565,6 +809,8 @@ class WorkItemApi {
       if (!snapshot.exists || snapshot.data() == null) {
         throw const WorkItemApiException('冲刺不存在。');
       }
+      final sprint = Sprint.fromMap(Map<String, dynamic>.from(snapshot.data()!));
+      await _ensureCanAccessWorkspaceId(sprint.workspaceId);
       final patch = <String, dynamic>{'status': status.name};
       if (status == SprintStatus.completed) {
         patch['completedAt'] = FieldValue.serverTimestamp();
@@ -578,12 +824,20 @@ class WorkItemApi {
   Future<void> deleteSprint(int id) async {
     return _guard(() async {
       await _ensureSeedData();
+      final sprint = await getSprintById(id);
+      if (sprint == null) {
+        throw const WorkItemApiException('冲刺不存在。');
+      }
       final affected = await _firestore
           .collection(_workItemsCollection)
-          .where('sprintId', isEqualTo: id)
+          .where('workspaceId', isEqualTo: sprint.workspaceId)
           .get();
       final batch = _firestore.batch();
       for (final doc in affected.docs) {
+        final data = doc.data();
+        if ((data['sprintId'] as num?)?.toInt() != id) {
+          continue;
+        }
         batch.update(doc.reference, {
           'sprintId': null,
           'sprint': null,
@@ -683,13 +937,8 @@ class WorkItemApi {
   Future<List<LookupOption>> listWorkItems({String query = ''}) async {
     return _guard(() async {
       await _ensureSeedData();
-      final snapshot = await _firestore
-          .collection(_workItemsCollection)
-          .orderBy('id', descending: true)
-          .get();
-
-      return snapshot.docs
-          .map((doc) => Map<String, dynamic>.from(doc.data()))
+      final items = await _loadWorkItemMaps();
+      return items
           .map(
             (data) => LookupOption(
               id: (data['id'] as num).toInt(),
@@ -707,7 +956,7 @@ class WorkItemApi {
     return _guard(() async {
       await _ensureSeedData();
       final results = await Future.wait([
-        _loadLookupCollection(_workspacesCollection),
+        _loadVisibleWorkspaceLookups(),
         _loadLookupCollection(_workTypesCollection),
         _loadLookupCollection(_usersCollection),
         _loadLookupCollection(_teamsCollection),
@@ -736,12 +985,8 @@ class WorkItemApi {
   }) async {
     return _guard(() async {
       await _ensureSeedData();
-      final snapshot = await _firestore
-          .collection(_workItemsCollection)
-          .orderBy('id', descending: true)
-          .get();
-      return snapshot.docs
-          .map((doc) => Map<String, dynamic>.from(doc.data()))
+      final maps = await _loadWorkItemMaps(workspaceId: workspaceId);
+      return maps
           .where(
             (data) => workspaceId == null || data['workspaceId'] == workspaceId,
           )
@@ -781,21 +1026,22 @@ class WorkItemApi {
     return _guard(() async {
       await _ensureSeedData();
       if (query.trim().isEmpty) return [];
-      final snapshot = await _firestore.collection(_workspacesCollection).get();
-      final workItemSnapshot = await _firestore.collection(_workItemsCollection).get();
+      final visibleWorkspaceMaps = await _loadVisibleWorkspaceMaps();
+      final visibleWorkspaceIds = visibleWorkspaceMaps
+          .map((data) => (data['id'] as num?)?.toInt())
+          .whereType<int>()
+          .toSet();
       final counts = <int, int>{};
-      for (final doc in workItemSnapshot.docs) {
-        final data = doc.data();
+      for (final data in await _loadWorkItemMaps()) {
         final workspaceId = (data['workspaceId'] as num?)?.toInt();
-        if (workspaceId != null) {
+        if (workspaceId != null && visibleWorkspaceIds.contains(workspaceId)) {
           counts.update(workspaceId, (value) => value + 1, ifAbsent: () => 1);
         }
       }
 
       final lowerQuery = query.toLowerCase();
-      return snapshot.docs
-          .map((doc) {
-            final data = doc.data();
+      return visibleWorkspaceMaps
+          .map((data) {
             final id = (data['id'] as num).toInt();
             return JiraSpace(
               id: id,
@@ -817,6 +1063,7 @@ class WorkItemApi {
   Future<void> updateWorkspace(int id, {String? name, String? key}) async {
     return _guard(() async {
       await _ensureSeedData();
+      await _ensureOwnsWorkspace(id);
       final data = <String, dynamic>{};
       if (name != null) data['title'] = name;
       if (key != null) data['subtitle'] = key;
@@ -828,6 +1075,7 @@ class WorkItemApi {
   Future<void> deleteWorkspace(int id) async {
     return _guard(() async {
       await _ensureSeedData();
+      await _ensureOwnsWorkspace(id);
       final workItems = await _firestore
           .collection(_workItemsCollection)
           .where('workspaceId', isEqualTo: id)
@@ -848,16 +1096,20 @@ class WorkItemApi {
     String? description,
     int? sprintId,
   }) async {
-    return createWorkItem(WorkItemCreateRequest(
-      workspaceId: workspaceId,
-      workTypeId: 1,
-      summary: summary,
-      reporterId: 1,
-      bucket: sprintId != null ? WorkItemBucket.sprint : WorkItemBucket.backlog,
-      status: WorkItemStatus.todo,
-      sprintId: sprintId,
-      description: description,
-    ));
+    return _guard(() async {
+      await _ensureSeedData();
+      final reporter = await _ensureCurrentUserLookup();
+      return createWorkItem(WorkItemCreateRequest(
+        workspaceId: workspaceId,
+        workTypeId: 1,
+        summary: summary,
+        reporterId: reporter?.id ?? 1,
+        bucket: sprintId != null ? WorkItemBucket.sprint : WorkItemBucket.backlog,
+        status: WorkItemStatus.todo,
+        sprintId: sprintId,
+        description: description,
+      ));
+    });
   }
 
   Future<WorkItemResponse> createWorkItem(WorkItemCreateRequest payload) async {
@@ -869,6 +1121,10 @@ class WorkItemApi {
       }
 
       final workspace = await _loadLookupById(_workspacesCollection, payload.workspaceId, 'workspace');
+      final visibleWorkspaceIds = await _visibleWorkspaceIds();
+      if (!visibleWorkspaceIds.contains(payload.workspaceId)) {
+        throw const WorkItemApiException('你没有在该空间创建工作项的权限。');
+      }
       final workType = await _loadLookupById(_workTypesCollection, payload.workTypeId, 'work type');
       final reporter = await _loadLookupById(_usersCollection, payload.reporterId, 'reporter');
       final assignee = await _loadOptionalLookupById(_usersCollection, payload.assigneeId, 'assignee');
@@ -937,6 +1193,7 @@ class WorkItemApi {
       };
 
       await _firestore.collection(_workItemsCollection).doc('$workItemId').set(document);
+      await _notifyWorkItemCreated(response, document);
       return response;
     });
   }
@@ -962,49 +1219,312 @@ class WorkItemApi {
   Future<void> _ensureSeedData() async {
     final bootstrapRef = _firestore.collection(_metaCollection).doc('bootstrap');
     final snapshot = await bootstrapRef.get();
-    if (snapshot.exists) {
-      return;
+    if (!snapshot.exists) {
+      await _firestore.runTransaction((transaction) async {
+        final current = await transaction.get(bootstrapRef);
+        if (current.exists) {
+          return;
+        }
+
+        final hasCurrentUser = _currentUid != null;
+        final countersRef = _firestore.collection(_metaCollection).doc('counters');
+        transaction.set(countersRef, {
+          'workspaces': 0,
+          'workTypes': 3,
+          'users': hasCurrentUser ? 1 : 2,
+          'teams': 1,
+          'labels': 0,
+          'workItems': 0,
+          'sprints': 0,
+          'feedback': 0,
+          'notifications': 0,
+        });
+        transaction.set(bootstrapRef, {
+          'seededAt': FieldValue.serverTimestamp(),
+        });
+
+        _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 1, title: '任务', subtitle: 'Task'));
+        _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 2, title: '缺陷', subtitle: 'Bug'));
+        _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 3, title: '故事', subtitle: 'Story'));
+        if (hasCurrentUser) {
+          final currentUid = _currentUid;
+          _seedUserLookup(
+            transaction,
+            id: 1,
+            uid: currentUid,
+            email: _currentEmail,
+          );
+        } else {
+          _seedLookup(transaction, _usersCollection, const LookupOption(id: 1, title: 'User 1', subtitle: 'user1@example.com'));
+          _seedLookup(transaction, _usersCollection, const LookupOption(id: 2, title: 'User 2', subtitle: 'user2@example.com'));
+        }
+        _seedLookup(transaction, _teamsCollection, const LookupOption(id: 1, title: 'Default Team', subtitle: 'team-1'));
+      });
     }
 
-    await _firestore.runTransaction((transaction) async {
-      final current = await transaction.get(bootstrapRef);
-      if (current.exists) {
-        return;
-      }
-
-      final countersRef = _firestore.collection(_metaCollection).doc('counters');
-      transaction.set(countersRef, {
-        'workspaces': 0,
-        'workTypes': 3,
-        'users': 2,
-        'teams': 1,
-        'labels': 0,
-        'workItems': 0,
-        'sprints': 0,
-        'feedback': 0,
-      });
-      transaction.set(bootstrapRef, {
-        'seededAt': FieldValue.serverTimestamp(),
-      });
-
-      _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 1, title: '任务', subtitle: 'Task'));
-      _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 2, title: '缺陷', subtitle: 'Bug'));
-      _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 3, title: '故事', subtitle: 'Story'));
-      if (_currentUid != null) {
-        _seedLookup(transaction, _usersCollection, LookupOption(id: 1, title: _currentUid, subtitle: _currentUid));
-      } else {
-        _seedLookup(transaction, _usersCollection, const LookupOption(id: 1, title: 'User 1', subtitle: 'user1@example.com'));
-        _seedLookup(transaction, _usersCollection, const LookupOption(id: 2, title: 'User 2', subtitle: 'user2@example.com'));
-      }
-      _seedLookup(transaction, _teamsCollection, const LookupOption(id: 1, title: 'Default Team', subtitle: 'team-1'));
-    });
+    await _ensureCurrentUserLookup();
   }
 
   Future<List<LookupOption>> _loadLookupCollection(String collection) async {
+    if (collection == _usersCollection) {
+      await _ensureCurrentUserLookup();
+      return _loadUserLookups();
+    }
     final snapshot = await _firestore.collection(collection).orderBy('id').get();
     return snapshot.docs
         .map((doc) => LookupOption.fromMap(Map<String, dynamic>.from(doc.data())))
         .toList(growable: false);
+  }
+
+  Future<List<LookupOption>> _loadUserLookups() async {
+    final snapshot = await _firestore.collection(_usersCollection).get();
+    final byId = <int, LookupOption>{};
+    for (final doc in snapshot.docs) {
+      final data = Map<String, dynamic>.from(doc.data());
+      final id = (data['id'] as num?)?.toInt();
+      if (id == null) {
+        continue;
+      }
+      byId[id] = _userLookupFromData(data);
+    }
+    final users = byId.values.toList(growable: false);
+    users.sort((left, right) => left.id.compareTo(right.id));
+    return users;
+  }
+
+  Future<List<LookupOption>> _loadVisibleWorkspaceLookups() async {
+    final workspaceMaps = await _loadVisibleWorkspaceMaps();
+    return workspaceMaps
+        .map((data) => LookupOption(
+              id: (data['id'] as num).toInt(),
+              title: data['title'] as String? ?? '',
+              subtitle: data['subtitle'] as String?,
+            ))
+        .toList(growable: false);
+  }
+
+  Future<List<Map<String, dynamic>>> _loadVisibleWorkspaceMaps() async {
+    final uid = _requireCurrentUid();
+    final byId = <int, Map<String, dynamic>>{};
+
+    Future<void> addSnapshot(QuerySnapshot snapshot) async {
+      for (final doc in snapshot.docs) {
+        final data = Map<String, dynamic>.from(doc.data() as Map);
+        if (!_canAccessWorkspace(data)) {
+          continue;
+        }
+        final id = (data['id'] as num?)?.toInt();
+        if (id != null) {
+          byId[id] = data;
+        }
+      }
+    }
+
+    await addSnapshot(await _firestore
+        .collection(_workspacesCollection)
+        .where('ownerUid', isEqualTo: uid)
+        .get());
+    await addSnapshot(await _firestore
+        .collection(_workspacesCollection)
+        .where('memberUids', arrayContains: uid)
+        .get());
+
+    final workspaces = byId.values.toList(growable: false);
+    workspaces.sort((left, right) {
+      final leftId = (left['id'] as num?)?.toInt() ?? 0;
+      final rightId = (right['id'] as num?)?.toInt() ?? 0;
+      return leftId.compareTo(rightId);
+    });
+    return workspaces;
+  }
+
+  Future<void> _ensureCanAccessWorkspaceId(int? workspaceId) async {
+    if (workspaceId == null) {
+      throw const WorkItemApiException('工作空间不存在。');
+    }
+
+    final snapshot = await _firestore.collection(_workspacesCollection).doc('$workspaceId').get();
+    final data = snapshot.data();
+    if (!snapshot.exists || data == null || !_canAccessWorkspace(data)) {
+      throw const WorkItemApiException('你没有访问该空间的权限。');
+    }
+  }
+
+  Future<void> _ensureOwnsWorkspace(int workspaceId) async {
+    final snapshot = await _firestore.collection(_workspacesCollection).doc('$workspaceId').get();
+    final data = snapshot.data();
+    if (!snapshot.exists || data == null) {
+      throw const WorkItemApiException('空间不存在。');
+    }
+    if (data['ownerUid'] != _requireCurrentUid()) {
+      throw const WorkItemApiException('只有空间创建者可以执行该操作。');
+    }
+  }
+
+  Future<Map<String, dynamic>> _loadAccessibleWorkItemData(int id) async {
+    final snapshot = await _firestore.collection(_workItemsCollection).doc('$id').get();
+    final data = snapshot.data();
+    if (!snapshot.exists || data == null) {
+      throw const WorkItemApiException('工作项不存在。');
+    }
+    final item = Map<String, dynamic>.from(data);
+    await _ensureCanAccessWorkspaceId((item['workspaceId'] as num?)?.toInt());
+    return item;
+  }
+
+  Future<void> _ensureCanEditWorkItem(int id) async {
+    await _loadAccessibleWorkItemData(id);
+  }
+
+  Future<void> _notifyWorkItemCreated(
+    WorkItemResponse response,
+    Map<String, dynamic> document,
+  ) async {
+    await _notifyParticipantsFromData(
+      document,
+      title: '有新的工作项',
+      description: '${response.key} · ${response.summary}',
+      workItemId: response.id,
+      route: '/work-item/${response.id}',
+      workspaceId: (document['workspaceId'] as num?)?.toInt(),
+    );
+  }
+
+  Future<void> _notifyWorkItemParticipants(
+    int id, {
+    required String title,
+    required String descriptionPrefix,
+  }) async {
+    final snapshot = await _firestore.collection(_workItemsCollection).doc('$id').get();
+    final data = snapshot.data();
+    if (!snapshot.exists || data == null) {
+      return;
+    }
+    final key = data['key'] as String? ?? '';
+    final summary = data['summary'] as String? ?? '';
+    await _notifyParticipantsFromData(
+      data,
+      title: title,
+      description: '$descriptionPrefix：$key · $summary',
+      workItemId: id,
+      route: '/work-item/$id',
+    );
+  }
+
+  Future<void> _notifyParticipantsFromData(
+    Map<String, dynamic> data, {
+    required String title,
+    required String description,
+    int? workItemId,
+    String? route,
+    int? workspaceId,
+  }) async {
+    final recipients = <String>{};
+    final createdBy = data['createdBy'] as String?;
+    if (createdBy != null && createdBy.isNotEmpty) {
+      recipients.add(createdBy);
+    }
+
+    await _addLookupUserUid(recipients, (data['reporterId'] as num?)?.toInt());
+    await _addLookupUserUid(recipients, (data['assigneeId'] as num?)?.toInt());
+    recipients.remove(_currentUid);
+
+    workspaceId ??= (data['workspaceId'] as num?)?.toInt();
+    for (final uid in recipients) {
+      if (!await _userCanAccessWorkspace(uid, workspaceId)) {
+        continue;
+      }
+      await _createNotification(
+        recipientUid: uid,
+        title: title,
+        description: description,
+        workItemId: workItemId,
+        route: route,
+        workspaceId: workspaceId,
+      );
+    }
+  }
+
+  Future<bool> _userCanAccessWorkspace(String uid, int? workspaceId) async {
+    if (workspaceId == null) {
+      return false;
+    }
+    final snapshot = await _firestore.collection(_workspacesCollection).doc('$workspaceId').get();
+    final data = snapshot.data();
+    if (!snapshot.exists || data == null) {
+      return false;
+    }
+    final email = await _emailForUid(uid);
+    return canAccessWorkspaceData(data, uid: uid, email: email);
+  }
+
+  Future<String?> _emailForUid(String uid) async {
+    final authDoc = await _firestore.collection(_usersCollection).doc(uid).get();
+    final directEmail = _normalizeEmail(authDoc.data()?['email'] as String?);
+    if (directEmail != null) {
+      return directEmail;
+    }
+
+    final snapshot = await _firestore
+        .collection(_usersCollection)
+        .where('uid', isEqualTo: uid)
+        .limit(1)
+        .get();
+    if (snapshot.docs.isEmpty) {
+      return null;
+    }
+    return _normalizeEmail(snapshot.docs.first.data()['email'] as String?);
+  }
+
+  Future<void> _addLookupUserUid(Set<String> recipients, int? userId) async {
+    if (userId == null) {
+      return;
+    }
+    final uid = await _uidForLookupUserId(userId);
+    if (uid != null && uid.isNotEmpty) {
+      recipients.add(uid);
+    }
+  }
+
+  Future<String?> _uidForLookupUserId(int userId) async {
+    final byId = await _firestore.collection(_usersCollection).doc('$userId').get();
+    final directUid = byId.data()?['uid'] as String?;
+    if (directUid != null && directUid.isNotEmpty) {
+      return directUid;
+    }
+
+    final snapshot = await _firestore
+        .collection(_usersCollection)
+        .where('id', isEqualTo: userId)
+        .limit(1)
+        .get();
+    if (snapshot.docs.isEmpty) {
+      return null;
+    }
+    return snapshot.docs.first.data()['uid'] as String?;
+  }
+
+  Future<void> _createNotification({
+    required String recipientUid,
+    required String title,
+    required String description,
+    int? workItemId,
+    String? route,
+    int? workspaceId,
+  }) async {
+    final id = await _nextId('notifications');
+    await _notificationsCollection.doc('$id').set({
+      'id': id,
+      'recipientUid': recipientUid,
+      'senderUid': _currentUid,
+      'title': title,
+      'description': description,
+      'workItemId': workItemId,
+      'workspaceId': workspaceId,
+      'route': route,
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<LookupOption> _loadLookupById(
@@ -1012,11 +1532,37 @@ class WorkItemApi {
     int id,
     String label,
   ) async {
+    if (collection == _usersCollection) {
+      final user = await _loadUserLookupById(id);
+      if (user == null) {
+        throw WorkItemApiException('找不到对应的 $label。');
+      }
+      return user;
+    }
     final snapshot = await _firestore.collection(collection).doc('$id').get();
     if (!snapshot.exists || snapshot.data() == null) {
       throw WorkItemApiException('找不到对应的 $label。');
     }
     return LookupOption.fromMap(Map<String, dynamic>.from(snapshot.data()!));
+  }
+
+  Future<LookupOption?> _loadUserLookupById(int id) async {
+    await _ensureCurrentUserLookup();
+    final direct = await _firestore.collection(_usersCollection).doc('$id').get();
+    final directData = direct.data();
+    if (direct.exists && directData != null && directData['id'] is num) {
+      return _userLookupFromData(Map<String, dynamic>.from(directData));
+    }
+
+    final snapshot = await _firestore
+        .collection(_usersCollection)
+        .where('id', isEqualTo: id)
+        .limit(1)
+        .get();
+    if (snapshot.docs.isEmpty) {
+      return null;
+    }
+    return _userLookupFromData(Map<String, dynamic>.from(snapshot.docs.first.data()));
   }
 
   Future<LookupOption?> _loadOptionalLookupById(
@@ -1115,6 +1661,95 @@ class WorkItemApi {
     transaction.set(_firestore.collection(collection).doc('${option.id}'), option.toMap());
   }
 
+  void _seedUserLookup(
+    Transaction transaction, {
+    required int id,
+    required String uid,
+    String? email,
+  }) {
+    final normalizedEmail = _normalizeEmail(email) ?? uid;
+    transaction.set(_firestore.collection(_usersCollection).doc('$id'), {
+      'id': id,
+      'uid': uid,
+      'title': normalizedEmail,
+      'subtitle': normalizedEmail,
+      'email': normalizedEmail,
+    });
+  }
+
+  Future<LookupOption?> _ensureCurrentUserLookup() async {
+    final uid = _currentUid;
+    if (uid == null || uid.isEmpty) {
+      return null;
+    }
+
+    final existing = await _firestore
+        .collection(_usersCollection)
+        .where('uid', isEqualTo: uid)
+        .get();
+    final existingUser = existing.docs
+        .map((doc) => Map<String, dynamic>.from(doc.data()))
+        .where((data) => data['id'] is num)
+        .cast<Map<String, dynamic>?>()
+        .firstWhere((data) => data != null, orElse: () => null);
+    if (existingUser != null) {
+      final data = existingUser;
+      await _syncAuthUserRecord(data);
+      return _userLookupFromData(data);
+    }
+
+    final id = await _nextId('users');
+    final normalizedEmail = _normalizeEmail(_currentEmail) ?? uid;
+    await _firestore.collection(_usersCollection).doc('$id').set({
+      'id': id,
+      'uid': uid,
+      'title': normalizedEmail,
+      'subtitle': normalizedEmail,
+      'email': normalizedEmail,
+      'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    await _syncAuthUserRecord({
+      'id': id,
+      'uid': uid,
+      'email': normalizedEmail,
+      'title': normalizedEmail,
+      'subtitle': normalizedEmail,
+    });
+    return LookupOption(id: id, title: normalizedEmail, subtitle: normalizedEmail);
+  }
+
+  Future<void> _syncAuthUserRecord(Map<String, dynamic> data) async {
+    final uid = data['uid'] as String?;
+    if (uid == null || uid.isEmpty) {
+      return;
+    }
+
+    final normalizedEmail = _normalizeEmail(data['email'] as String?) ??
+        _normalizeEmail(_currentEmail);
+    await _firestore.collection(_usersCollection).doc(uid).set({
+      'uid': uid,
+      if (data['id'] is num) 'id': (data['id'] as num).toInt(),
+      'email': ?normalizedEmail,
+      if (data['title'] is String) 'username': data['title'],
+    }, SetOptions(merge: true));
+  }
+
+  LookupOption _userLookupFromData(Map<String, dynamic> data) {
+    final id = (data['id'] as num).toInt();
+    final email = _normalizeEmail(data['email'] as String?) ??
+        _normalizeEmail(data['subtitle'] as String?);
+    final title = (data['title'] as String?) ??
+        (data['username'] as String?) ??
+        email ??
+        (data['uid'] as String?) ??
+        '';
+    return LookupOption(
+      id: id,
+      title: title,
+      subtitle: email ?? data['subtitle'] as String?,
+    );
+  }
+
   bool _matchesQuery(String value, String query) {
     final normalizedQuery = query.trim().toLowerCase();
     if (normalizedQuery.isEmpty) {
@@ -1141,11 +1776,21 @@ class WorkItemApi {
     int? limit,
     DateTime? Function(Map<String, dynamic> data)? sortBy,
   }) async {
-    final snapshot = await _firestore.collection(_workItemsCollection).get();
-    final items = snapshot.docs
-        .map((doc) => Map<String, dynamic>.from(doc.data()))
-        .where((data) => workspaceId == null || data['workspaceId'] == workspaceId)
-        .toList(growable: false);
+    final visibleWorkspaceIds = workspaceId == null
+        ? await _visibleWorkspaceIds()
+        : {workspaceId};
+    if (workspaceId != null) {
+      await _ensureCanAccessWorkspaceId(workspaceId);
+    }
+    final items = <Map<String, dynamic>>[];
+    for (final id in visibleWorkspaceIds) {
+      final snapshot = await _firestore
+          .collection(_workItemsCollection)
+          .where('workspaceId', isEqualTo: id)
+          .get();
+      items.addAll(snapshot.docs
+          .map((doc) => Map<String, dynamic>.from(doc.data())));
+    }
     final sorted = [...items]
       ..sort((left, right) {
         final leftDate = sortBy?.call(left) ?? _asDateTime(left['createdAt']);
@@ -1266,4 +1911,32 @@ class WorkItemApi {
     }
     return null;
   }
+
+  bool _canAccessWorkspace(Map<String, dynamic> data) {
+    return canAccessWorkspaceData(data, uid: _currentUid, email: _currentEmail);
+  }
+
+  String _requireCurrentUid() {
+    final uid = _currentUid;
+    if (uid == null || uid.isEmpty) {
+      throw const WorkItemApiException('请先登录。');
+    }
+    return uid;
+  }
+
+  Future<Set<int>> _visibleWorkspaceIds() async {
+    final workspaces = await _loadVisibleWorkspaceMaps();
+    return workspaces
+        .map((data) => (data['id'] as num?)?.toInt())
+        .whereType<int>()
+        .toSet();
+  }
+}
+
+String? _normalizeEmail(String? value) {
+  final normalized = value?.trim().toLowerCase();
+  if (normalized == null || normalized.isEmpty || !normalized.contains('@')) {
+    return null;
+  }
+  return normalized;
 }

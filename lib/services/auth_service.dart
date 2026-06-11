@@ -60,7 +60,7 @@ class AuthService {
       await _firestore.collection(_usersCollection).doc(user.uid).set({
         'uid': user.uid,
         'username': username,
-        'email': email,
+        'email': email.trim().toLowerCase(),
         'createdAt': FieldValue.serverTimestamp(),
       });
       return user;
@@ -138,7 +138,7 @@ class AuthService {
       await _firestore.collection(_usersCollection).doc(user.uid).set({
         'uid': user.uid,
         'username': user.displayName ?? user.email?.split('@').first ?? '',
-        'email': user.email ?? '',
+        'email': user.email?.trim().toLowerCase() ?? '',
         'createdAt': FieldValue.serverTimestamp(),
       });
     }

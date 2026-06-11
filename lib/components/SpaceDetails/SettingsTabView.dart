@@ -7,9 +7,11 @@ class SettingsTabView extends StatelessWidget {
   const SettingsTabView({
     super.key,
     required this.space,
+    required this.onInviteMember,
   });
 
   final JiraSpace space;
+  final VoidCallback onInviteMember;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +31,15 @@ class SettingsTabView extends StatelessWidget {
               _SettingRow(label: '空间 Key', value: space.key),
               const SizedBox(height: 14),
               _SettingRow(label: '空间模板', value: space.template),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onInviteMember,
+                  icon: const Icon(Icons.person_add_alt_1_rounded),
+                  label: const Text('邀请成员协作'),
+                ),
+              ),
             ],
           ),
         ),
