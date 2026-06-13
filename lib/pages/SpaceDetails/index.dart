@@ -4,6 +4,7 @@ import 'package:ottersync/components/Common/EmptyStateView.dart';
 import 'package:ottersync/components/Common/SheetHeader.dart';
 import 'package:ottersync/components/SpaceDetails/BacklogTabView.dart';
 import 'package:ottersync/components/SpaceDetails/BoardTabView.dart';
+import 'package:ottersync/components/SpaceDetails/InviteMemberSheet.dart';
 import 'package:ottersync/components/SpaceDetails/CalendarTabView.dart';
 import 'package:ottersync/components/SpaceDetails/ReportTabView.dart';
 import 'package:ottersync/components/SpaceDetails/SettingsTabView.dart';
@@ -37,6 +38,7 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
   List<IssueSummary> _allItems = const [];
   List<Sprint> _sprints = const [];
   WorkItemStatus? _statusFilter;
+  int _currentTab = 0;
   bool _loading = true;
   String? _error;
 
@@ -45,11 +47,21 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
     super.initState();
     _api = widget._api ?? WorkItemApi();
     _tabController = TabController(length: 6, vsync: this);
+    // 监听 Tab 切换：筛选按钮只在「面板」「待办事项列表」显示，需要随之重建 AppBar。
+    _tabController.addListener(_handleTabChanged);
     _loadSpaceDetails();
+  }
+
+  void _handleTabChanged() {
+    final index = _tabController.index;
+    if (index != _currentTab) {
+      setState(() => _currentTab = index);
+    }
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -76,15 +88,17 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
           ],
         ),
         actions: [
-          IconButton(
-            onPressed: _openStatusFilter,
-            tooltip: '状态筛选',
-            icon: Icon(
-              _statusFilter != null
-                  ? Icons.filter_alt
-                  : Icons.filter_alt_outlined,
+          // 状态筛选只作用于「面板」(Tab 1) 和「待办事项列表」(Tab 3)，其它 Tab 隐藏。
+          if (_currentTab == 1 || _currentTab == 3)
+            IconButton(
+              onPressed: _openStatusFilter,
+              tooltip: '状态筛选',
+              icon: Icon(
+                _statusFilter != null
+                    ? Icons.filter_alt
+                    : Icons.filter_alt_outlined,
+              ),
             ),
-          ),
           IconButton(
             onPressed: _openMoreActions,
             icon: const Icon(Icons.more_vert_rounded),
@@ -243,6 +257,15 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
           mainAxisSize: MainAxisSize.min,
           children: [
             const SheetHeader(title: '空间操作'),
+            ListTile(
+              leading: Icon(Icons.person_add_alt_1_rounded,
+                  color: palette.primary),
+              title: const Text('邀请成员协作'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _inviteMember();
+              },
+            ),
             ListTile(
               leading: Icon(Icons.edit_rounded, color: palette.primary),
               title: const Text('编辑空间名称'),
@@ -583,50 +606,19 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
 
   Future<void> _inviteMember() async {
     if (_space == null) return;
-    final controller = TextEditingController();
-    final email = await showDialog<String>(
+    final email = await showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('邀请成员'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(
-            labelText: '成员邮箱',
-            hintText: 'member@example.com',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('邀请'),
-          ),
-        ],
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => InviteMemberSheet(
+        api: _api,
+        workspaceId: _space!.id,
       ),
     );
-    controller.dispose();
-    if (email == null || email.isEmpty) return;
-
-    try {
-      await _api.inviteWorkspaceMember(
-        workspaceId: _space!.id,
-        email: email,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已邀请 $email')),
-      );
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('邀请失败：$error')),
-      );
-    }
+    if (email == null || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已邀请 $email')),
+    );
   }
 
   Future<void> _loadSpaceDetails() async {

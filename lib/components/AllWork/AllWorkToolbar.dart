@@ -111,25 +111,43 @@ class _ViewModeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = AppThemePalette.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(AppSpace.radiusLarge);
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: selected ? palette.primarySoft : palette.surface,
-          borderRadius: BorderRadius.circular(AppSpace.radiusLarge),
-          border: Border.all(
-            color: isDark && !selected ? palette.border : Colors.transparent,
-          ),
-          boxShadow: isDark || selected ? null : AppShadows.cardSoft,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: selected ? palette.primarySoft : palette.surface,
+        borderRadius: radius,
+        border: Border.all(
+          color: isDark && !selected ? palette.border : Colors.transparent,
         ),
-        child: Icon(
-          icon,
-          color: selected ? palette.primary : palette.textSecondary,
-          size: 20,
+        boxShadow: isDark || selected ? null : AppShadows.cardSoft,
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          splashColor: palette.primary.withValues(alpha: 0.18),
+          highlightColor: palette.primary.withValues(alpha: 0.08),
+          child: Center(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              transitionBuilder: (child, animation) => ScaleTransition(
+                scale: animation,
+                child: FadeTransition(opacity: animation, child: child),
+              ),
+              child: Icon(
+                icon,
+                key: ValueKey(selected),
+                color: selected ? palette.primary : palette.textSecondary,
+                size: 20,
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
@@ -5,6 +7,8 @@ import 'package:ottersync/components/Common/PageHeader.dart';
 import 'package:ottersync/components/Dashboard/AssignedIssuesCard.dart';
 import 'package:ottersync/components/Dashboard/DashboardActivityCard.dart';
 import 'package:ottersync/components/Dashboard/StatsGrid.dart';
+import 'package:ottersync/services/app_event_bus.dart';
+import 'package:ottersync/services/dashboard_stats_service.dart';
 import 'package:ottersync/state/auth_controller.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
 import 'package:ottersync/viewmodels/work_item_api.dart';
@@ -26,12 +30,29 @@ class _DashboardViewState extends State<DashboardView> {
   bool _loading = true;
   String? _error;
   DateTime? _lastSyncedAt;
+  List<DashboardStat> _stats = const [];
+  StreamSubscription<AppEvent>? _eventSub;
 
   @override
   void initState() {
     super.initState();
     _api = widget._api ?? WorkItemApi();
     _loadDashboardData();
+    // 任意工作项变化都广播过来，仪表盘据此自动重算，无需手动下拉刷新。
+    _eventSub = AppEventBus.instance.on({
+      AppEventType.workItemCreated,
+      AppEventType.workItemUpdated,
+    }, (event) {
+      if (mounted) {
+        _loadDashboardData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -88,12 +109,10 @@ class _DashboardViewState extends State<DashboardView> {
       );
     }
 
-    final stats = _buildStats();
-
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
       children: [
-        StatsGrid(stats: stats),
+        StatsGrid(stats: _stats),
         const SizedBox(height: 16),
         AssignedIssuesCard(
           issues: _issues,
@@ -121,51 +140,29 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
-  List<DashboardStat> _buildStats() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final assigned = _issues.length;
-    final inProgress = _allItems
-        .where((i) => i.statusKey == WorkItemStatus.inProgress)
-        .length;
-    final dueSoon = _allItems.where((i) {
-      final due = i.dueDate;
-      if (due == null) return false;
-      final dueDay = DateTime(due.year, due.month, due.day);
-      final diff = dueDay.difference(today).inDays;
-      return diff >= 0 &&
-          diff <= 3 &&
-          i.statusKey != WorkItemStatus.done;
-    }).length;
-    final completedThisWeek = _allItems.where((i) {
-      if (i.statusKey != WorkItemStatus.done) return false;
-      final created = i.createdAt;
-      if (created == null) return false;
-      return now.difference(created).inDays <= 7;
-    }).length;
-
+  List<DashboardStat> _statsFrom(DashboardStatsResult result) {
     return [
       DashboardStat(
         label: '分配给我',
-        value: assigned,
+        value: result.assigned,
         icon: Icons.assignment_ind_rounded,
         color: const Color(0xFF1F5DBD),
       ),
       DashboardStat(
         label: '进行中',
-        value: inProgress,
+        value: result.inProgress,
         icon: Icons.timelapse_rounded,
         color: const Color(0xFF8E4BC3),
       ),
       DashboardStat(
         label: '即将到期',
-        value: dueSoon,
+        value: result.dueSoon,
         icon: Icons.event_rounded,
         color: const Color(0xFFE56910),
       ),
       DashboardStat(
         label: '本周已完成',
-        value: completedThisWeek,
+        value: result.completedThisWeek,
         icon: Icons.check_circle_rounded,
         color: const Color(0xFF1F8B4C),
       ),
@@ -208,13 +205,22 @@ class _DashboardViewState extends State<DashboardView> {
       final results = await Future.wait([
         _api.loadAssignedIssues(),
         _api.loadDashboardActivities(),
-        _api.loadViewedItems(limit: 100),
+        _api.listWorkItemSummaries(),
       ]);
       if (!mounted) return;
+      final issues = results[0] as List<IssueSummary>;
+      final allItems = results[2] as List<IssueSummary>;
+      // 在后台 Isolate 线程上聚合统计，避免阻塞 UI。
+      final statsResult = await const DashboardStatsService().computeStats(
+        assignedCount: issues.length,
+        allItems: allItems,
+      );
+      if (!mounted) return;
       setState(() {
-        _issues = results[0] as List<IssueSummary>;
+        _issues = issues;
         _activities = results[1] as List<DashboardActivityItem>;
-        _allItems = results[2] as List<IssueSummary>;
+        _allItems = allItems;
+        _stats = _statsFrom(statsResult);
         _loading = false;
         _lastSyncedAt = DateTime.now();
       });

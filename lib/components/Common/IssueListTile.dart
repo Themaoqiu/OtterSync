@@ -13,6 +13,8 @@ class IssueListTile extends StatelessWidget {
     this.trailing,
     this.compact = false,
     this.onTap,
+    this.done,
+    this.onToggleDone,
   });
 
   final String title;
@@ -23,6 +25,9 @@ class IssueListTile extends StatelessWidget {
   final Widget? trailing;
   final bool compact;
   final VoidCallback? onTap;
+
+  final bool? done;
+  final ValueChanged<bool>? onToggleDone;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +51,14 @@ class IssueListTile extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                leading ?? _IssueCheckbox(color: palette.primary),
+                leading ??
+                    (done != null
+                        ? _IssueToggleCheckbox(
+                            done: done!,
+                            color: palette.primary,
+                            onToggle: onToggleDone,
+                          )
+                        : _IssueCheckbox(color: palette.primary)),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -55,8 +67,13 @@ class IssueListTile extends StatelessWidget {
                       Text(
                         title,
                         style: theme.textTheme.titleMedium?.copyWith(
-                          color: palette.textPrimary,
+                          color: done == true
+                              ? palette.textSecondary
+                              : palette.textPrimary,
                           height: 1.2,
+                          decoration: done == true
+                              ? TextDecoration.lineThrough
+                              : null,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -152,6 +169,62 @@ class _IssueCheckbox extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.5), width: 1.5),
       ),
       child: Icon(Icons.check_rounded, color: color, size: 18),
+    );
+  }
+}
+
+class _IssueToggleCheckbox extends StatelessWidget {
+  const _IssueToggleCheckbox({
+    required this.done,
+    required this.color,
+    this.onToggle,
+  });
+
+  final bool done;
+  final Color color;
+  final ValueChanged<bool>? onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: done ? color : color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: color.withValues(alpha: done ? 1 : 0.5),
+            width: 1.5,
+          ),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: onToggle == null ? null : () => onToggle!(!done),
+            splashColor: (done ? Colors.white : color).withValues(alpha: 0.22),
+            highlightColor: (done ? Colors.white : color).withValues(alpha: 0.1),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              transitionBuilder: (child, animation) => ScaleTransition(
+                scale: CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutBack,
+                ),
+                child: child,
+              ),
+              child: done
+                  ? const Icon(Icons.check_rounded,
+                      key: ValueKey(true), color: Colors.white, size: 18)
+                  : const SizedBox.shrink(key: ValueKey(false)),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

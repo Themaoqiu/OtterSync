@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:ottersync/services/app_event_bus.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
 import 'package:ottersync/viewmodels/workspace_access.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
@@ -16,32 +18,27 @@ class WorkItemApiException implements Exception {
 class WorkItemApi {
   WorkItemApi({
     FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
     String? currentUid,
     String? currentEmail,
   })
     : _firestore = firestore ?? FirebaseFirestore.instance,
-      _currentUid = currentUid ?? _defaultUid,
-      _currentEmail = currentEmail ?? _defaultEmail;
+      _auth = auth ?? FirebaseAuth.instance,
+      _overrideUid = currentUid,
+      _overrideEmail = _normalizeEmail(currentEmail);
 
   final FirebaseFirestore _firestore;
-  final String? _currentUid;
-  final String? _currentEmail;
+  final FirebaseAuth _auth;
 
-  static String? _defaultUid;
-  static String? _defaultEmail;
+  // Optional fixed identity for tests. In production both are null and the
+  // current user is resolved live from FirebaseAuth on every access, so a
+  // long-lived instance never serves a previous account's data.
+  final String? _overrideUid;
+  final String? _overrideEmail;
 
-  /// Sets the default UID for all WorkItemApi instances.
-  /// Called once after authentication is confirmed.
-  static void init({required String uid, String? email}) {
-    _defaultUid = uid;
-    _defaultEmail = _normalizeEmail(email);
-  }
-
-  /// Clears the default UID on sign-out.
-  static void clear() {
-    _defaultUid = null;
-    _defaultEmail = null;
-  }
+  String? get _currentUid => _overrideUid ?? _auth.currentUser?.uid;
+  String? get _currentEmail =>
+      _overrideEmail ?? _normalizeEmail(_auth.currentUser?.email);
 
   static const _metaCollection = '_meta';
   static const _workspacesCollection = 'workspaces';
@@ -138,6 +135,10 @@ class WorkItemApi {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      AppEventBus.instance.emitType(
+        AppEventType.workspaceCreated,
+        payload: {'workspaceId': record.id, 'name': record.name},
+      );
       return record;
     });
   }
@@ -277,6 +278,10 @@ class WorkItemApi {
         route: '/space-details/${invite.workspaceId}',
         workspaceId: invite.workspaceId,
       );
+      AppEventBus.instance.emitType(
+        AppEventType.workspaceMembershipChanged,
+        payload: {'workspaceId': invite.workspaceId, 'action': 'accepted'},
+      );
     });
   }
 
@@ -305,6 +310,10 @@ class WorkItemApi {
         'invitedEmails': FieldValue.arrayRemove([invite.invitedEmail]),
       });
       await batch.commit();
+      AppEventBus.instance.emitType(
+        AppEventType.workspaceMembershipChanged,
+        payload: {'workspaceId': invite.workspaceId, 'action': 'declined'},
+      );
     });
   }
 
@@ -360,6 +369,94 @@ class WorkItemApi {
         (data['workspaceId'] as num?)?.toInt(),
       );
       return WorkItemResponse.fromMap(data);
+    });
+  }
+
+  /// 删除工作项，并清理把它当父项的子项引用
+  Future<void> deleteWorkItem(int id) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      await _ensureCanEditWorkItem(id);
+      final affected = await _firestore
+          .collection(_workItemsCollection)
+          .where('parentId', isEqualTo: id)
+          .get();
+      final batch = _firestore.batch();
+      for (final doc in affected.docs) {
+        batch.update(doc.reference, {
+          'parentId': null,
+          'parent': null,
+        });
+      }
+      batch.delete(_firestore.collection(_workItemsCollection).doc('$id'));
+      await batch.commit();
+      AppEventBus.instance.emitType(
+        AppEventType.workItemUpdated,
+        payload: {'workItemId': id, 'deleted': true},
+      );
+    });
+  }
+
+  /// 添加附件，返回更新后的工作项
+  Future<WorkItemResponse?> addAttachment(
+    int id,
+    AttachmentCreateRequest attachment,
+  ) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      await _ensureCanEditWorkItem(id);
+      final docRef = _firestore.collection(_workItemsCollection).doc('$id');
+      final doc = await docRef.get();
+      if (!doc.exists) {
+        throw const WorkItemApiException('工作项不存在。');
+      }
+      final data = Map<String, dynamic>.from(doc.data() as Map);
+      final attachments = <Map<String, dynamic>>[
+        ...((data['attachments'] as List?)
+                ?.map((e) => Map<String, dynamic>.from(e as Map)) ??
+            const []),
+        attachment.toMap(),
+      ];
+      await docRef.update({
+        'attachments': attachments,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      AppEventBus.instance.emitType(
+        AppEventType.workItemUpdated,
+        payload: {'workItemId': id},
+      );
+      return getWorkItemById(id);
+    });
+  }
+
+  /// 移除指定下标的附件，返回更新后的工作项
+  Future<WorkItemResponse?> removeAttachment(int id, int index) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      await _ensureCanEditWorkItem(id);
+      final docRef = _firestore.collection(_workItemsCollection).doc('$id');
+      final doc = await docRef.get();
+      if (!doc.exists) {
+        throw const WorkItemApiException('工作项不存在。');
+      }
+      final data = Map<String, dynamic>.from(doc.data() as Map);
+      final attachments = ((data['attachments'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList()) ??
+          <Map<String, dynamic>>[];
+      if (index < 0 || index >= attachments.length) {
+        throw const WorkItemApiException('附件不存在。');
+      }
+      attachments.removeAt(index);
+      await docRef.update({
+        'attachments': attachments,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      AppEventBus.instance.emitType(
+        AppEventType.workItemUpdated,
+        payload: {'workItemId': id},
+      );
+      return getWorkItemById(id);
     });
   }
 
@@ -508,6 +605,10 @@ class WorkItemApi {
         title: '工作项已更新',
         descriptionPrefix: '字段发生变化',
       );
+      AppEventBus.instance.emitType(
+        AppEventType.workItemUpdated,
+        payload: {'workItemId': id},
+      );
     });
   }
 
@@ -536,11 +637,18 @@ class WorkItemApi {
       await _firestore.collection(_workItemsCollection).doc('$id').update({
         'status': status.name,
         'updatedAt': FieldValue.serverTimestamp(),
+        'completedAt': status == WorkItemStatus.done
+            ? FieldValue.serverTimestamp()
+            : null,
       });
       await _notifyWorkItemParticipants(
         id,
         title: '工作项状态已变更',
         descriptionPrefix: '状态更新为 ${workItemStatusLabel(status)}',
+      );
+      AppEventBus.instance.emitType(
+        AppEventType.workItemUpdated,
+        payload: {'workItemId': id, 'status': status.name},
       );
     });
   }
@@ -554,18 +662,15 @@ class WorkItemApi {
     return _guard(() async {
       await _ensureSeedData();
       await _ensureCanEditWorkItem(workItemId);
-      final docId = '${_currentUid}_$workItemId';
+      final uid = _requireCurrentUid();
+      final docId = '${uid}_$workItemId';
       await _recentViewsCollection.doc(docId).set({
-        'userId': _currentUid,
+        'userId': uid,
         'targetId': workItemId,
         'targetKey': workItemKey,
         'targetTitle': workItemTitle,
         'viewedAt': FieldValue.serverTimestamp(),
       });
-      await _firestore
-          .collection(_workItemsCollection)
-          .doc('$workItemId')
-          .update({'lastViewedAt': FieldValue.serverTimestamp()});
     });
   }
 
@@ -588,11 +693,53 @@ class WorkItemApi {
   Future<List<IssueSummary>> loadViewedItems({int limit = 4}) async {
     return _guard(() async {
       await _ensureSeedData();
-      final items = await _loadWorkItemMaps(
-        limit: limit,
-        sortBy: (data) => _asDateTime(data['lastViewedAt']),
-      );
-      return items.map(_issueSummaryFromWorkItem).toList(growable: false);
+      final uid = _currentUid;
+      if (uid == null || uid.isEmpty) {
+        return const <IssueSummary>[];
+      }
+
+      // 每个用户的浏览记录独立存放在 recentViews 中（文档 id = uid_workItemId），
+      // 因此这里只会取到当前登录用户自己的浏览历史，不会串到别人账号。
+      final viewSnapshot = await _recentViewsCollection
+          .where('userId', isEqualTo: uid)
+          .get();
+      if (viewSnapshot.docs.isEmpty) {
+        return const <IssueSummary>[];
+      }
+
+      final viewedAtById = <int, DateTime?>{};
+      for (final doc in viewSnapshot.docs) {
+        final data = Map<String, dynamic>.from(doc.data() as Map);
+        final targetId = (data['targetId'] as num?)?.toInt();
+        if (targetId != null) {
+          viewedAtById[targetId] = _asDateTime(data['viewedAt']);
+        }
+      }
+
+      // 回查工作项本体（同时受空间权限过滤），再把每个用户自己的浏览时间贴回去。
+      final items = await _loadWorkItemMaps();
+      final result = <IssueSummary>[];
+      for (final data in items) {
+        final id = (data['id'] as num?)?.toInt();
+        if (id == null || !viewedAtById.containsKey(id)) {
+          continue;
+        }
+        result.add(
+          _issueSummaryFromWorkItem(data)
+              .copyWith(lastViewedAt: viewedAtById[id]),
+        );
+      }
+
+      result.sort((a, b) {
+        final ta = a.lastViewedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final tb = b.lastViewedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return tb.compareTo(ta);
+      });
+
+      if (result.length <= limit) {
+        return result;
+      }
+      return result.take(limit).toList(growable: false);
     });
   }
 
@@ -934,20 +1081,15 @@ class WorkItemApi {
     });
   }
 
-  Future<List<LookupOption>> listWorkItems({String query = ''}) async {
+  Future<List<IssueSummary>> listWorkItemSummaries({String query = ''}) async {
     return _guard(() async {
       await _ensureSeedData();
       final items = await _loadWorkItemMaps();
       return items
-          .map(
-            (data) => LookupOption(
-              id: (data['id'] as num).toInt(),
-              title: data['summary'] as String? ?? '',
-              subtitle: data['key'] as String?,
-              status: data['status'] as String?,
-            ),
-          )
-          .where((item) => _matchesQuery(item.title, query) || _matchesQuery(item.subtitle ?? '', query))
+          .map(_issueSummaryFromWorkItem)
+          .where((item) =>
+              _matchesQuery(item.title, query) ||
+              _matchesQuery(item.key, query))
           .toList(growable: false);
     });
   }
@@ -976,6 +1118,52 @@ class WorkItemApi {
         teams: teams,
         labels: labels,
       );
+    });
+  }
+
+  Future<List<LookupOption>> loadWorkspaceMembers(int workspaceId) async {
+    return _guard(() async {
+      await _ensureSeedData();
+      await _ensureCurrentUserLookup();
+      final snapshot =
+          await _firestore.collection(_workspacesCollection).doc('$workspaceId').get();
+      final data = snapshot.data();
+      if (!snapshot.exists || data == null || !_canAccessWorkspace(data)) {
+        throw const WorkItemApiException('你没有访问该空间的权限。');
+      }
+      final memberUids = <String>{};
+      final ownerUid = data['ownerUid'] as String?;
+      if (ownerUid != null && ownerUid.isNotEmpty) {
+        memberUids.add(ownerUid);
+      }
+      for (final uid in (data['memberUids'] as List<dynamic>? ?? const [])) {
+        if (uid is String && uid.isNotEmpty) {
+          memberUids.add(uid);
+        }
+      }
+
+      final users = await _firestore.collection(_usersCollection).get();
+      final byId = <int, LookupOption>{};
+      for (final doc in users.docs) {
+        final userData = Map<String, dynamic>.from(doc.data());
+        final uid = userData['uid'] as String?;
+        final id = (userData['id'] as num?)?.toInt();
+        if (id == null || uid == null || !memberUids.contains(uid)) {
+          continue;
+        }
+        byId[id] = _userLookupFromData(userData);
+      }
+      final members = byId.values.toList(growable: false);
+      members.sort((left, right) => left.id.compareTo(right.id));
+      return members;
+    });
+  }
+
+  Future<List<LookupOption>> listRegisteredUsers() async {
+    return _guard(() async {
+      await _ensureSeedData();
+      await _ensureCurrentUserLookup();
+      return _loadUserLookups();
     });
   }
 
@@ -1172,7 +1360,7 @@ class WorkItemApi {
         dueDate: payload.dueDate,
         startDate: payload.startDate,
         createdAt: now,
-        lastViewedAt: now,
+        updatedAt: now,
         labels: labels,
         attachments: payload.attachments,
       );
@@ -1189,11 +1377,20 @@ class WorkItemApi {
         'labelIds': labels.map((item) => item.id).toList(),
         'createdBy': _currentUid,
         'createdAt': FieldValue.serverTimestamp(),
-        'lastViewedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       };
 
       await _firestore.collection(_workItemsCollection).doc('$workItemId').set(document);
       await _notifyWorkItemCreated(response, document);
+      AppEventBus.instance.emitType(
+        AppEventType.workItemCreated,
+        payload: {
+          'workItemId': response.id,
+          'workspaceId': workspace.id,
+          'key': response.key,
+          'summary': response.summary,
+        },
+      );
       return response;
     });
   }
@@ -1246,8 +1443,8 @@ class WorkItemApi {
         _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 1, title: '任务', subtitle: 'Task'));
         _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 2, title: '缺陷', subtitle: 'Bug'));
         _seedLookup(transaction, _workTypesCollection, const LookupOption(id: 3, title: '故事', subtitle: 'Story'));
-        if (hasCurrentUser) {
-          final currentUid = _currentUid;
+        final currentUid = _currentUid;
+        if (currentUid != null) {
           _seedUserLookup(
             transaction,
             id: 1,
@@ -1845,8 +2042,8 @@ class WorkItemApi {
         }
         return null;
       }(),
-      lastViewedAt: _asDateTime(data['lastViewedAt']),
       createdAt: _asDateTime(data['createdAt']),
+      completedAt: _asDateTime(data['completedAt']),
     );
   }
 

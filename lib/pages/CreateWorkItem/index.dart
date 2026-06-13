@@ -6,8 +6,9 @@ import 'package:ottersync/components/CreateWorkItem/CreateWorkItemMoreFieldsSect
 import 'package:ottersync/components/CreateWorkItem/CreateWorkItemSectionCard.dart';
 import 'package:ottersync/components/CreateWorkItem/CreateWorkItemTopBar.dart';
 import 'package:ottersync/components/CreateWorkItem/TypeSelectorBar.dart';
-import 'package:ottersync/components/Common/AppSurface.dart';
+import 'package:ottersync/components/Common/DatePickerSheet.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
+import 'package:ottersync/components/Common/SheetHeader.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/work_item_api.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
@@ -118,6 +119,7 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
                               _selectedSprint = null;
                             });
                             _loadSprintOptions();
+                            _loadMembers();
                           },
                           onWorkTypeChanged: (value) => setState(() {
                             _selectedWorkType = value;
@@ -249,10 +251,12 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
                             }
                           },
                           onPickStartDate: () => _pickDate(
+                            title: '选择开始日期',
                             initial: _startDate,
                             onPicked: (value) => setState(() => _startDate = value),
                           ),
                           onPickDueDate: () => _pickDate(
+                            title: '选择截止日期',
                             initial: _dueDate,
                             onPicked: (value) => setState(() => _dueDate = value),
                           ),
@@ -279,14 +283,13 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
       setState(() {
         _workspaces = lookups.workspaces;
         _workTypes = lookups.workTypes;
-        _users = lookups.users;
         _teams = lookups.teams;
         _labels = lookups.labels;
         _selectedWorkspace = _selectedWorkspace ?? _firstOrNull(_workspaces);
         _selectedWorkType = _selectedWorkType ?? _firstOrNull(_workTypes);
-        _selectedReporter = _selectedReporter ?? _firstOrNull(_users);
         _loading = false;
       });
+      await _loadMembers();
       await _loadParentItems();
       await _loadSprintOptions();
     } catch (error) {
@@ -297,6 +300,45 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
       setState(() {
         _loadError = '$error';
         _loading = false;
+      });
+    }
+  }
+
+  Future<void> _loadMembers() async {
+    final workspace = _selectedWorkspace;
+    if (workspace == null) {
+      setState(() {
+        _users = const [];
+        _selectedReporter = null;
+        _selectedAssignee = null;
+      });
+      return;
+    }
+    try {
+      final members = await _api.loadWorkspaceMembers(workspace.id);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _users = members;
+        final memberIds = members.map((m) => m.id).toSet();
+        if (_selectedReporter == null ||
+            !memberIds.contains(_selectedReporter!.id)) {
+          _selectedReporter = _firstOrNull(members);
+        }
+        if (_selectedAssignee != null &&
+            !memberIds.contains(_selectedAssignee!.id)) {
+          _selectedAssignee = null;
+        }
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _users = const [];
+        _selectedReporter = null;
+        _selectedAssignee = null;
       });
     }
   }
@@ -496,55 +538,55 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
     final result = await showModalBottomSheet<Set<int>>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (context) {
-        final theme = Theme.of(context);
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-            child: StatefulBuilder(
-              builder: (context, setModalState) {
-                return AppSurface(
-                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-                  radius: AppSpace.radiusXLarge,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('选择标签', style: theme.textTheme.titleLarge),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: _labels.map((label) {
-                          final isSelected = selected.contains(label.id);
-                          return FilterChip(
-                            label: Text(label.title),
-                            selected: isSelected,
-                            onSelected: (value) {
-                              setModalState(() {
-                                if (value) {
-                                  selected.add(label.id);
-                                } else {
-                                  selected.remove(label.id);
-                                }
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: () => Navigator.of(context).pop(selected),
-                          child: const Text('完成'),
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SheetHeader(title: '选择标签'),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: _labels.map((label) {
+                            final isSelected = selected.contains(label.id);
+                            return FilterChip(
+                              label: Text(label.title),
+                              selected: isSelected,
+                              onSelected: (value) {
+                                setModalState(() {
+                                  if (value) {
+                                    selected.add(label.id);
+                                  } else {
+                                    selected.remove(label.id);
+                                  }
+                                });
+                              },
+                            );
+                          }).toList(),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: () =>
+                                Navigator.of(context).pop(selected),
+                            child: const Text('完成'),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-              },
-            ),
+                ],
+              );
+            },
           ),
         );
       },
@@ -560,18 +602,18 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
   }
 
   Future<void> _pickDate({
+    required String title,
     required DateTime? initial,
     required ValueChanged<DateTime?> onPicked,
   }) async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initial ?? now,
-      firstDate: DateTime(now.year - 2),
-      lastDate: DateTime(now.year + 5),
+    final result = await showDatePickerSheet(
+      context,
+      title: title,
+      initialEnd: initial,
+      allowRange: false,
     );
-    if (picked != null) {
-      onPicked(picked);
+    if (result != null) {
+      onPicked(result.end);
     }
   }
 
@@ -585,84 +627,94 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
     return showModalBottomSheet<LookupOption?>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (context) {
         final theme = Theme.of(context);
-        final screenHeight = MediaQuery.of(context).size.height;
+        final palette = AppThemePalette.of(context);
+        final maxHeight = MediaQuery.of(context).size.height * 0.7;
         final searchController = TextEditingController();
+        final showSearch = options.length > 5;
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-            child: StatefulBuilder(
-              builder: (context, setSheetState) {
-                final query = searchController.text.trim().toLowerCase();
-                final filtered = options
-                    .where((item) {
-                      if (query.isEmpty) {
-                        return true;
-                      }
-                      return item.title.toLowerCase().contains(query) ||
-                          (item.subtitle?.toLowerCase().contains(query) ??
-                              false);
-                    })
-                    .toList(growable: false);
-                return AppSurface(
-                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-                  radius: AppSpace.radiusXLarge,
-                  child: Column(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: StatefulBuilder(
+                builder: (context, setSheetState) {
+                  final query = searchController.text.trim().toLowerCase();
+                  final filtered = options
+                      .where((item) {
+                        if (query.isEmpty) {
+                          return true;
+                        }
+                        return item.title.toLowerCase().contains(query) ||
+                            (item.subtitle?.toLowerCase().contains(query) ??
+                                false);
+                      })
+                      .toList(growable: false);
+                  return Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: theme.textTheme.titleLarge),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: searchController,
-                        onChanged: (_) => setSheetState(() {}),
-                        decoration: InputDecoration(
-                          hintText: title == '选择空间' ? '搜索空间' : '搜索工作类型',
-                          prefixIcon: const Icon(Icons.search_rounded),
+                      SheetHeader(title: title),
+                      if (showSearch)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                          child: TextField(
+                            controller: searchController,
+                            autofocus: true,
+                            onChanged: (_) => setSheetState(() {}),
+                            decoration: const InputDecoration(
+                              hintText: '搜索',
+                              prefixIcon: Icon(Icons.search_rounded),
+                              isDense: true,
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
                       if (allowClear)
                         ListTile(
-                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(Icons.clear_rounded,
+                              color: palette.textSecondary),
                           title: const Text('清空'),
                           onTap: () => Navigator.of(context).pop(null),
                         ),
-                      if (filtered.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          child: Text(
-                            emptyLabel,
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        )
-                      else
-                        SizedBox(
-                          height: screenHeight * 0.5,
-                          child: ListView.builder(
-                            itemCount: filtered.length,
-                            itemBuilder: (context, index) {
-                              final item = filtered[index];
-                              final isSelected = item.id == selected?.id;
-                              return ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: Text(item.title),
-                                subtitle: item.subtitle == null
-                                    ? null
-                                    : Text(item.subtitle!),
-                                trailing: isSelected
-                                    ? const Icon(Icons.check_rounded)
-                                    : null,
-                                onTap: () => Navigator.of(context).pop(item),
-                              );
-                            },
-                          ),
-                        ),
+                      Flexible(
+                        child: filtered.isEmpty
+                            ? Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 32),
+                                child: Text(
+                                  emptyLabel,
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                              )
+                            : ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: filtered.length,
+                                itemBuilder: (context, index) {
+                                  final item = filtered[index];
+                                  final isSelected = item.id == selected?.id;
+                                  return ListTile(
+                                    title: Text(item.title),
+                                    subtitle: item.subtitle == null
+                                        ? null
+                                        : Text(item.subtitle!),
+                                    trailing: isSelected
+                                        ? Icon(Icons.check_rounded,
+                                            color: palette.primary)
+                                        : null,
+                                    onTap: () =>
+                                        Navigator.of(context).pop(item),
+                                  );
+                                },
+                              ),
+                      ),
+                      const SizedBox(height: 8),
                     ],
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         );

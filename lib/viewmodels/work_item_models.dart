@@ -173,7 +173,7 @@ class WorkItemResponse {
     this.dueDate,
     this.startDate,
     this.createdAt,
-    this.lastViewedAt,
+    this.updatedAt,
   });
 
   factory WorkItemResponse.fromMap(Map<String, dynamic> map) {
@@ -194,7 +194,7 @@ class WorkItemResponse {
       dueDate: _dateTimeOrNull(map['dueDate']),
       startDate: _dateTimeOrNull(map['startDate']),
       createdAt: _dateTimeOrNull(map['createdAt']),
-      lastViewedAt: _dateTimeOrNull(map['lastViewedAt']),
+      updatedAt: _dateTimeOrNull(map['updatedAt']),
       labels: (map['labels'] as List<dynamic>? ?? const [])
           .map((item) => LookupOption.fromMap(Map<String, dynamic>.from(item as Map)))
           .toList(),
@@ -220,7 +220,7 @@ class WorkItemResponse {
   final DateTime? dueDate;
   final DateTime? startDate;
   final DateTime? createdAt;
-  final DateTime? lastViewedAt;
+  final DateTime? updatedAt;
   final List<LookupOption> labels;
   final List<AttachmentCreateRequest> attachments;
 
@@ -242,7 +242,7 @@ class WorkItemResponse {
       'dueDate': dueDate,
       'startDate': startDate,
       'createdAt': createdAt,
-      'lastViewedAt': lastViewedAt,
+      'updatedAt': updatedAt,
       'labels': labels.map((item) => item.toMap()).toList(),
       'attachments': attachments.map((item) => item.toMap()).toList(),
     };

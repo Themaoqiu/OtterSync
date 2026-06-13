@@ -46,6 +46,7 @@ class IssueSummary {
     this.workTypeTitle,
     this.lastViewedAt,
     this.createdAt,
+    this.completedAt,
   });
 
   final int? id;
@@ -68,6 +69,7 @@ class IssueSummary {
   final String? workTypeTitle;
   final DateTime? lastViewedAt;
   final DateTime? createdAt;
+  final DateTime? completedAt;
 
   IssueSummary copyWith({
     int? id,
@@ -90,6 +92,7 @@ class IssueSummary {
     String? workTypeTitle,
     DateTime? lastViewedAt,
     DateTime? createdAt,
+    DateTime? completedAt,
   }) {
     return IssueSummary(
       id: id ?? this.id,
@@ -112,6 +115,7 @@ class IssueSummary {
       workTypeTitle: workTypeTitle ?? this.workTypeTitle,
       lastViewedAt: lastViewedAt ?? this.lastViewedAt,
       createdAt: createdAt ?? this.createdAt,
+      completedAt: completedAt ?? this.completedAt,
     );
   }
 }

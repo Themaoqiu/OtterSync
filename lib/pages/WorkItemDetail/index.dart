@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
 import 'package:ottersync/components/Common/DatePickerSheet.dart';
 import 'package:ottersync/components/Common/SheetHeader.dart';
 import 'package:ottersync/components/Common/work_type_icon.dart';
+import 'package:ottersync/services/pomodoro_service.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
 import 'package:ottersync/viewmodels/work_item_api.dart';
@@ -27,6 +29,7 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
   WorkItemResponse? _item;
   CreateWorkItemLookups? _lookups;
   List<Sprint> _sprints = const [];
+  List<LookupOption> _members = const [];
   bool _loading = true;
   String? _error;
 
@@ -58,11 +61,15 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
       final sprints = item == null
           ? <Sprint>[]
           : await _api.listSprints(workspaceId: item.workspace.id);
+      final members = item == null
+          ? <LookupOption>[]
+          : await _api.loadWorkspaceMembers(item.workspace.id);
       if (!mounted) return;
       setState(() {
         _item = item;
         _lookups = lookups;
         _sprints = sprints;
+        _members = members;
         _loading = false;
         if (item == null) _error = '工作项不存在';
       });
@@ -89,19 +96,15 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
         leading: const BackButton(),
         title: const SizedBox.shrink(),
         actions: [
-          IconButton(
-            tooltip: '查看',
-            onPressed: () {},
-            icon: const Icon(Icons.remove_red_eye_outlined),
-          ),
+          _buildFocusAction(),
           IconButton(
             tooltip: '附件',
-            onPressed: () {},
+            onPressed: _item == null ? null : _openAttachments,
             icon: const Icon(Icons.attach_file_rounded),
           ),
           IconButton(
             tooltip: '更多',
-            onPressed: () {},
+            onPressed: _item == null ? null : _openMoreMenu,
             icon: const Icon(Icons.more_horiz_rounded),
           ),
           const SizedBox(width: 4),
@@ -109,6 +112,77 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
       ),
       body: _buildBody(),
     );
+  }
+
+  /// AppBar 上的「专注计时」按钮：未计时时点开选时长 sheet；
+  /// 正在计时时显示剩余 mm:ss，再点则停止。状态由前台服务驱动。
+  Widget _buildFocusAction() {
+    final palette = AppThemePalette.of(context);
+    return ListenableBuilder(
+      listenable: PomodoroController.instance,
+      builder: (context, _) {
+        final pomodoro = PomodoroController.instance;
+        if (pomodoro.isRunning) {
+          return TextButton.icon(
+            onPressed: pomodoro.stop,
+            icon: Icon(Icons.timer_rounded, color: palette.primary, size: 20),
+            label: Text(
+              pomodoro.remainingClock,
+              style: TextStyle(
+                color: palette.primary,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          );
+        }
+        return IconButton(
+          tooltip: '专注计时',
+          onPressed: _startFocus,
+          icon: const Icon(Icons.timer_outlined),
+        );
+      },
+    );
+  }
+
+  /// 弹出底部 sheet 选择专注时长，并启动番茄钟前台服务。
+  Future<void> _startFocus() async {
+    final item = _item;
+    if (item == null) return;
+
+    final minutes = await showModalBottomSheet<int>(
+      context: context,
+      builder: (sheetContext) {
+        const options = <int>[25, 15, 5];
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SheetHeader(title: '专注计时'),
+              for (final m in options)
+                ListTile(
+                  leading: const Icon(Icons.timer_outlined),
+                  title: Text('$m 分钟'),
+                  onTap: () => Navigator.of(sheetContext).pop(m),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+    if (minutes == null || !mounted) return;
+
+    final ok = await PomodoroController.instance.start(
+      taskName: item.summary,
+      duration: Duration(minutes: minutes),
+    );
+    if (!mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('无法启动专注计时，请检查通知权限')),
+      );
+    }
   }
 
   Widget _buildBody() {
@@ -353,7 +427,7 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
   }
 
   Future<void> _pickAssignee() async {
-    final users = _lookups?.users ?? const <LookupOption>[];
+    final users = _members;
     final picked = await _pickFromList<LookupOption?>(
       title: '指派经办人',
       options: <LookupOption?>[null, ...users],
@@ -500,6 +574,353 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
     }
   }
 
+  Future<void> _openAttachments() async {
+    final palette = AppThemePalette.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final attachments = _item!.attachments;
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SheetHeader(
+                    title: '附件',
+                    trailing: TextButton.icon(
+                      onPressed: () async {
+                        final added = await _addAttachment();
+                        if (added) setSheetState(() {});
+                      },
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('添加'),
+                    ),
+                  ),
+                  if (attachments.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      child: Text(
+                        '暂无附件',
+                        style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                              color: palette.textSecondary,
+                            ),
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: attachments.length,
+                        itemBuilder: (ctx, index) {
+                          final att = attachments[index];
+                          return ListTile(
+                            leading: Icon(
+                              _attachmentIcon(att.kind),
+                              color: palette.primary,
+                            ),
+                            title: Text(att.name),
+                            subtitle: att.uri.isEmpty
+                                ? null
+                                : Text(
+                                    att.uri,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                            trailing: IconButton(
+                              tooltip: '删除',
+                              icon: Icon(
+                                Icons.delete_outline_rounded,
+                                color: palette.danger,
+                              ),
+                              onPressed: () async {
+                                final removed =
+                                    await _removeAttachment(index);
+                                if (removed) setSheetState(() {});
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<bool> _addAttachment() async {
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController();
+    final uriController = TextEditingController();
+    final mimeTypeController = TextEditingController();
+    AttachmentKind selectedKind = AttachmentKind.document;
+
+    final result = await showDialog<AttachmentCreateRequest>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('添加附件'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: '名称'),
+                  validator: (value) =>
+                      value == null || value.trim().isEmpty ? '请输入名称' : null,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<AttachmentKind>(
+                  initialValue: selectedKind,
+                  decoration: const InputDecoration(labelText: '类型'),
+                  items: AttachmentKind.values
+                      .map(
+                        (item) => DropdownMenuItem(
+                          value: item,
+                          child: Text(_attachmentKindLabel(item)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) selectedKind = value;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: uriController,
+                  decoration: const InputDecoration(labelText: '地址或路径'),
+                  validator: (value) =>
+                      value == null || value.trim().isEmpty ? '请输入地址' : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: mimeTypeController,
+                  decoration:
+                      const InputDecoration(labelText: 'MIME 类型（可选）'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() != true) return;
+                Navigator.of(ctx).pop(
+                  AttachmentCreateRequest(
+                    name: nameController.text.trim(),
+                    kind: selectedKind,
+                    uri: uriController.text.trim(),
+                    mimeType: mimeTypeController.text.trim().isEmpty
+                        ? null
+                        : mimeTypeController.text.trim(),
+                  ),
+                );
+              },
+              child: const Text('添加'),
+            ),
+          ],
+        );
+      },
+    );
+
+    nameController.dispose();
+    uriController.dispose();
+    mimeTypeController.dispose();
+
+    if (result == null) return false;
+    try {
+      final updated = await _api.addAttachment(_item!.id, result);
+      if (!mounted) return false;
+      if (updated != null) setState(() => _item = updated);
+      return true;
+    } catch (e) {
+      if (!mounted) return false;
+      _showSnackBar('添加失败：$e');
+      return false;
+    }
+  }
+
+  Future<bool> _removeAttachment(int index) async {
+    try {
+      final updated = await _api.removeAttachment(_item!.id, index);
+      if (!mounted) return false;
+      if (updated != null) setState(() => _item = updated);
+      return true;
+    } catch (e) {
+      if (!mounted) return false;
+      _showSnackBar('删除失败：$e');
+      return false;
+    }
+  }
+
+  IconData _attachmentIcon(AttachmentKind kind) {
+    switch (kind) {
+      case AttachmentKind.photo:
+        return Icons.image_outlined;
+      case AttachmentKind.video:
+        return Icons.videocam_outlined;
+      case AttachmentKind.document:
+        return Icons.description_outlined;
+    }
+  }
+
+  String _attachmentKindLabel(AttachmentKind kind) {
+    switch (kind) {
+      case AttachmentKind.photo:
+        return '图片';
+      case AttachmentKind.video:
+        return '视频';
+      case AttachmentKind.document:
+        return '文档';
+    }
+  }
+
+  Future<void> _openMoreMenu() async {
+    final palette = AppThemePalette.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SheetHeader(title: '更多操作'),
+            ListTile(
+              leading: Icon(Icons.subdirectory_arrow_right_rounded,
+                  color: palette.primary),
+              title: const Text('创建子工作项'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _createChildItem();
+              },
+            ),
+            ListTile(
+              leading:
+                  Icon(Icons.account_tree_rounded, color: palette.primary),
+              title: const Text('分配给父工作项'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickParent();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.copy_rounded, color: palette.primary),
+              title: const Text('复制工作项 Key'),
+              onTap: () {
+                Navigator.pop(ctx);
+                Clipboard.setData(ClipboardData(text: _item!.key));
+                _showSnackBar('已复制 ${_item!.key}');
+              },
+            ),
+            ListTile(
+              leading:
+                  Icon(Icons.delete_outline_rounded, color: palette.danger),
+              title: Text('删除工作项',
+                  style: TextStyle(color: palette.danger)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _deleteItem();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _createChildItem() async {
+    final controller = TextEditingController();
+    final summary = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('创建子工作项'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: null,
+          decoration: const InputDecoration(labelText: '摘要'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('创建'),
+          ),
+        ],
+      ),
+    );
+    if (summary == null || summary.isEmpty) return;
+    try {
+      await _api.createWorkItem(
+        WorkItemCreateRequest(
+          workspaceId: _item!.workspace.id,
+          workTypeId: _item!.workType.id,
+          summary: summary,
+          reporterId: _item!.reporter.id,
+          parentId: _item!.id,
+        ),
+      );
+      if (!mounted) return;
+      _showSnackBar('已创建子工作项');
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar('创建失败：$e');
+    }
+  }
+
+  Future<void> _deleteItem() async {
+    final palette = AppThemePalette.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除工作项'),
+        content: const Text('确定要删除此工作项吗？此操作无法撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: palette.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _api.deleteWorkItem(_item!.id);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar('删除失败：$e');
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _pickDueDate() async {
     final start = _item!.startDate;
     final result = await showDatePickerSheet(
@@ -588,10 +1009,10 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
                   label: '已创建',
                   value: _formatDateTime(item.createdAt!),
                 ),
-              if (item.lastViewedAt != null)
+              if (item.updatedAt != null)
                 _ReadOnlyRow(
                   label: '已更新',
-                  value: _formatDateTime(item.lastViewedAt!),
+                  value: _formatDateTime(item.updatedAt!),
                 ),
               _ReadOnlyRow(label: '类型', value: item.workType.title),
               _ReadOnlyRow(label: '报告人', value: item.reporter.title),
@@ -647,7 +1068,7 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
         dueDate: dueDate ?? _item!.dueDate,
         startDate: startDate ?? _item!.startDate,
         createdAt: _item!.createdAt,
-        lastViewedAt: _item!.lastViewedAt,
+        updatedAt: _item!.updatedAt,
       );
     });
   }
@@ -754,17 +1175,23 @@ class _SquareIconChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppThemePalette.of(context);
-    final child = InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: palette.surfaceInset,
-          borderRadius: BorderRadius.circular(8),
+    final radius = BorderRadius.circular(8);
+    final child = Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: palette.surfaceInset,
+        borderRadius: radius,
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          splashColor: tint.withValues(alpha: 0.18),
+          highlightColor: tint.withValues(alpha: 0.08),
+          child: Center(child: Icon(icon, color: tint, size: 20)),
         ),
-        child: Icon(icon, color: tint, size: 20),
       ),
     );
     if (tooltip != null) return Tooltip(message: tooltip!, child: child);

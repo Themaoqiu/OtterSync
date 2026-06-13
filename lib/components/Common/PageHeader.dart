@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/Common/UserAvatar.dart';
+import 'package:ottersync/state/auth_controller.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 
 /// Top-of-page header shared by Home / Spaces / AllWork / Dashboard / Notifications.
@@ -12,20 +13,24 @@ class PageHeader extends StatelessWidget {
     super.key,
     this.title,
     this.actions = const [],
-    this.userInitials = 'MT',
+    this.userInitials,
     this.onAvatarTap,
     this.titleAlign = TextAlign.left,
   });
 
   final String? title;
   final List<Widget> actions;
-  final String userInitials;
+
+  /// Optional override; when null the initials are derived from the signed-in
+  /// user's display name so every page stays in sync with the account page.
+  final String? userInitials;
   final VoidCallback? onAvatarTap;
   final TextAlign titleAlign;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final initials = userInitials ?? _initialsFromAuth(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
       child: Row(
@@ -33,7 +38,7 @@ class PageHeader extends StatelessWidget {
           InkWell(
             onTap: onAvatarTap ?? () => context.push('/account'),
             borderRadius: BorderRadius.circular(999),
-            child: UserAvatar(label: userInitials),
+            child: UserAvatar(label: initials),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -51,6 +56,12 @@ class PageHeader extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static String _initialsFromAuth(BuildContext context) {
+    final name = AuthScope.of(context).displayName.trim();
+    if (name.isEmpty) return '?';
+    return name.characters.take(2).toString().toUpperCase();
   }
 }
 

@@ -247,28 +247,36 @@ class _BacklogItemRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onToggleDone(!done),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: done ? palette.primary : Colors.transparent,
-                  border: Border.all(
-                    color: done ? palette.primary : palette.textSecondary,
-                    width: 1.6,
+            Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: () => onToggleDone(!done),
+                customBorder: const CircleBorder(),
+                splashColor: palette.primary.withValues(alpha: 0.18),
+                highlightColor: palette.primary.withValues(alpha: 0.08),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: done ? palette.primary : Colors.transparent,
+                      border: Border.all(
+                        color: done ? palette.primary : palette.textSecondary,
+                        width: 1.6,
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: done
+                        ? const Icon(Icons.check_rounded,
+                            color: Colors.white, size: 16)
+                        : null,
                   ),
-                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: done
-                    ? const Icon(Icons.check_rounded,
-                        color: Colors.white, size: 16)
-                    : null,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

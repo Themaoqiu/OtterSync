@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
 class ThemeController extends ChangeNotifier {
-  ThemeController({ThemeMode initialMode = ThemeMode.dark})
-    : _themeMode = initialMode;
-
+  ThemeController({ThemeMode initialMode = ThemeMode.light}) : _themeMode = initialMode;
+  
   ThemeMode _themeMode;
-
+  
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode != ThemeMode.light;
 
@@ -23,8 +22,7 @@ class ThemeControllerScope extends InheritedNotifier<ThemeController> {
   });
 
   static ThemeController of(BuildContext context) {
-    final scope = context
-        .dependOnInheritedWidgetOfExactType<ThemeControllerScope>();
+    final scope = context.dependOnInheritedWidgetOfExactType<ThemeControllerScope>();
     assert(scope != null, 'ThemeControllerScope not found in widget tree.');
     return scope!.notifier!;
   }

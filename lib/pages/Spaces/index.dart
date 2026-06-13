@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/Common/AppSurface.dart';
@@ -6,6 +8,7 @@ import 'package:ottersync/components/Common/PageHeader.dart';
 import 'package:ottersync/components/Common/SectionHeader.dart';
 import 'package:ottersync/components/Spaces/CreateSpaceDialog.dart';
 import 'package:ottersync/components/Spaces/SpaceCard.dart';
+import 'package:ottersync/services/app_event_bus.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
 import 'package:ottersync/viewmodels/work_item_api.dart';
@@ -25,12 +28,29 @@ class _SpacesViewState extends State<SpacesView> {
   List<JiraSpace> _spaces = const [];
   bool _loading = true;
   String? _error;
+  StreamSubscription<AppEvent>? _eventSub;
 
   @override
   void initState() {
     super.initState();
     _api = widget._api ?? WorkItemApi();
     _loadSpaces();
+    // 注册广播接收：工作项 / 空间 / 成员关系变化时静默刷新列表。
+    _eventSub = AppEventBus.instance.on({
+      AppEventType.workItemCreated,
+      AppEventType.workspaceCreated,
+      AppEventType.workspaceMembershipChanged,
+    }, (event) {
+      if (mounted) {
+        _loadSpaces();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSub?.cancel();
+    super.dispose();
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +12,7 @@ import 'package:ottersync/components/Home/HomeAiCreateCard.dart';
 import 'package:ottersync/components/Home/HomeOverviewCard.dart';
 import 'package:ottersync/components/Home/QuickAccessSection.dart';
 import 'package:ottersync/components/Home/RecentProjectsCard.dart';
+import 'package:ottersync/services/app_event_bus.dart';
 import 'package:ottersync/state/shell_scope.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
@@ -36,12 +39,27 @@ class _HomeViewState extends State<HomeView> {
   List<IssueSummary> _dynamicItems = const [];
   bool _isLiked = false;
   bool _isDisliked = false;
+  StreamSubscription<AppEvent>? _eventSub;
 
   @override
   void initState() {
     super.initState();
     _api = widget._api ?? WorkItemApi();
     _loadHomeData();
+    _eventSub = AppEventBus.instance.on({
+      AppEventType.workItemCreated,
+      AppEventType.workItemUpdated,
+    }, (event) {
+      if (mounted) {
+        _loadHomeData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSub?.cancel();
+    super.dispose();
   }
 
   @override
