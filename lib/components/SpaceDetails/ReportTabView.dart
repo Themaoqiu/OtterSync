@@ -43,8 +43,9 @@ class ReportTabView extends StatelessWidget {
           child: _VelocityChart(
             sprintLabel: '$spaceKey 面板 ${activeSprint.name}',
             committed: sprintItems.length,
-            completed:
-                sprintItems.where((i) => i.statusKey == WorkItemStatus.done).length,
+            completed: sprintItems
+                .where((i) => i.statusKey == WorkItemStatus.done)
+                .length,
           ),
         ),
         const SizedBox(height: 14),
@@ -56,9 +57,7 @@ class ReportTabView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        AppSurface(
-          child: _CumulativeFlowChart(items: items),
-        ),
+        AppSurface(child: _CumulativeFlowChart(items: items)),
       ],
     );
   }
@@ -109,12 +108,7 @@ class _VelocityChart extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Center(
-          child: Text(
-            sprintLabel,
-            style: theme.textTheme.bodySmall,
-          ),
-        ),
+        Center(child: Text(sprintLabel, style: theme.textTheme.bodySmall)),
         const SizedBox(height: 18),
         _LegendRow(
           color: const Color(0xFF6CA6FF),
@@ -153,7 +147,8 @@ class _BurndownChart extends StatelessWidget {
     final total = sprintItems.length;
     final maxY = math.max(4, total);
 
-    final start = sprint.startDate ?? DateTime.now().subtract(const Duration(days: 9));
+    final start =
+        sprint.startDate ?? DateTime.now().subtract(const Duration(days: 9));
     final end = sprint.endDate ?? DateTime.now().add(const Duration(days: 9));
 
     return Column(
@@ -192,8 +187,10 @@ class _BurndownChart extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(_dateLabel(start), style: theme.textTheme.bodySmall),
-              Text(_dateLabel(_midPoint(start, end)),
-                  style: theme.textTheme.bodySmall),
+              Text(
+                _dateLabel(_midPoint(start, end)),
+                style: theme.textTheme.bodySmall,
+              ),
               Text(_dateLabel(end), style: theme.textTheme.bodySmall),
             ],
           ),
@@ -205,11 +202,7 @@ class _BurndownChart extends StatelessWidget {
           value: '$remaining',
         ),
         const SizedBox(height: 8),
-        _LegendRow(
-          color: palette.textTertiary,
-          label: '理想燃烧率',
-          value: '',
-        ),
+        _LegendRow(color: palette.textTertiary, label: '理想燃烧率', value: ''),
       ],
     );
   }
@@ -231,13 +224,11 @@ class _CumulativeFlowChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = AppThemePalette.of(context);
-    final todo =
-        items.where((i) => i.statusKey == WorkItemStatus.todo).length;
+    final todo = items.where((i) => i.statusKey == WorkItemStatus.todo).length;
     final inProgress = items
         .where((i) => i.statusKey == WorkItemStatus.inProgress)
         .length;
-    final done =
-        items.where((i) => i.statusKey == WorkItemStatus.done).length;
+    final done = items.where((i) => i.statusKey == WorkItemStatus.done).length;
     final total = todo + inProgress + done;
     final maxY = math.max(6, total);
 
@@ -270,11 +261,7 @@ class _CumulativeFlowChart extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        _LegendRow(
-          color: const Color(0xFFCFD6E4),
-          label: '待办',
-          value: '$todo',
-        ),
+        _LegendRow(color: const Color(0xFFCFD6E4), label: '待办', value: '$todo'),
         const SizedBox(height: 8),
         _LegendRow(
           color: const Color(0xFF7FB0FF),
@@ -334,10 +321,7 @@ class _LegendRow extends StatelessWidget {
         Container(
           width: 10,
           height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 10),
         Expanded(

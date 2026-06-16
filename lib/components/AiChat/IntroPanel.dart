@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 
-/// 空对话时的欢迎页：渐变 logo + 大标题 + 三条建议。
 class IntroPanel extends StatelessWidget {
   const IntroPanel({
     super.key,
@@ -61,14 +60,15 @@ class IntroPanel extends StatelessWidget {
             decoration: BoxDecoration(
               color: palette.danger.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: palette.danger.withValues(alpha: 0.3),
-              ),
+              border: Border.all(color: palette.danger.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.warning_amber_rounded,
-                    color: palette.danger, size: 18),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: palette.danger,
+                  size: 18,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -146,8 +146,11 @@ class _SuggestionChip extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Icon(Icons.north_east_rounded,
-                color: palette.textSecondary, size: 18),
+            Icon(
+              Icons.north_east_rounded,
+              color: palette.textSecondary,
+              size: 18,
+            ),
           ],
         ),
       ),

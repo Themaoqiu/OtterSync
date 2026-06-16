@@ -3,10 +3,7 @@ import 'package:ottersync/components/Common/AppSurface.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 
 class HomeAiCreateCard extends StatelessWidget {
-  const HomeAiCreateCard({
-    super.key,
-    required this.onTap,
-  });
+  const HomeAiCreateCard({super.key, required this.onTap});
 
   final VoidCallback onTap;
 
@@ -62,7 +59,10 @@ class HomeAiCreateCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF3E4FF),
                   borderRadius: BorderRadius.circular(10),

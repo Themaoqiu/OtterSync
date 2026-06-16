@@ -61,9 +61,7 @@ class AllWorkToolbar extends StatelessWidget {
                   Expanded(
                     child: Text(
                       selectedFilter.title,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                      ),
+                      style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

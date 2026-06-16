@@ -200,10 +200,7 @@ class _DonutChart extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              '$total',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+            Text('$total', style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 6),
             Text('工作项总数', style: Theme.of(context).textTheme.bodyMedium),
           ],
@@ -287,16 +284,36 @@ class _PriorityBreakdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = AppThemePalette.of(context);
     final entries = <_PriorityEntry>[
-      _PriorityEntry('Highest', Icons.keyboard_double_arrow_up_rounded,
-          const Color(0xFFFF6B5F), priorityCounts['Highest'] ?? 0),
-      _PriorityEntry('High', Icons.keyboard_arrow_up_rounded,
-          const Color(0xFFFF8B6B), priorityCounts['High'] ?? 0),
-      _PriorityEntry('Medium', Icons.drag_handle_rounded,
-          const Color(0xFFFF8B00), priorityCounts['Medium'] ?? 0),
-      _PriorityEntry('Low', Icons.keyboard_arrow_down_rounded,
-          const Color(0xFF6CA6FF), priorityCounts['Low'] ?? 0),
-      _PriorityEntry('Lowest', Icons.keyboard_double_arrow_down_rounded,
-          const Color(0xFF4C84FF), priorityCounts['Lowest'] ?? 0),
+      _PriorityEntry(
+        'Highest',
+        Icons.keyboard_double_arrow_up_rounded,
+        const Color(0xFFFF6B5F),
+        priorityCounts['Highest'] ?? 0,
+      ),
+      _PriorityEntry(
+        'High',
+        Icons.keyboard_arrow_up_rounded,
+        const Color(0xFFFF8B6B),
+        priorityCounts['High'] ?? 0,
+      ),
+      _PriorityEntry(
+        'Medium',
+        Icons.drag_handle_rounded,
+        const Color(0xFFFF8B00),
+        priorityCounts['Medium'] ?? 0,
+      ),
+      _PriorityEntry(
+        'Low',
+        Icons.keyboard_arrow_down_rounded,
+        const Color(0xFF6CA6FF),
+        priorityCounts['Low'] ?? 0,
+      ),
+      _PriorityEntry(
+        'Lowest',
+        Icons.keyboard_double_arrow_down_rounded,
+        const Color(0xFF4C84FF),
+        priorityCounts['Lowest'] ?? 0,
+      ),
     ];
     final maxCount = entries.fold<int>(0, (m, e) => math.max(m, e.count));
 

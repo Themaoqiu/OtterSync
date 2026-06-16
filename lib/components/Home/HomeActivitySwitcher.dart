@@ -93,9 +93,9 @@ class _ModeButton extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: selected ? palette.primary : palette.textSecondary,
-                    height: 1.0,
-                  ),
+                color: selected ? palette.primary : palette.textSecondary,
+                height: 1.0,
+              ),
             ),
           ),
         ),

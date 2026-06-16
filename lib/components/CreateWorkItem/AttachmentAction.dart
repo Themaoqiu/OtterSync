@@ -17,7 +17,9 @@ class AttachmentAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = AppThemePalette.of(context);
-    final accent = onTap == null ? palette.textTertiary : theme.colorScheme.primary;
+    final accent = onTap == null
+        ? palette.textTertiary
+        : theme.colorScheme.primary;
 
     return InkWell(
       onTap: onTap,

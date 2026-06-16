@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// 渐变圆形 AI 头像，AiChat 各处复用。
 class AssistantAvatar extends StatelessWidget {
   const AssistantAvatar({super.key, this.size = 30});
 

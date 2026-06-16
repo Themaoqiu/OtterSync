@@ -91,7 +91,10 @@ class TypeSelectorBar extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Icon(Icons.arrow_drop_down_rounded, color: palette.textSecondary),
+                    Icon(
+                      Icons.arrow_drop_down_rounded,
+                      color: palette.textSecondary,
+                    ),
                   ],
                 ),
               ),
@@ -121,13 +124,16 @@ class TypeSelectorBar extends StatelessWidget {
             child: StatefulBuilder(
               builder: (context, setSheetState) {
                 final query = searchController.text.trim().toLowerCase();
-                final filtered = options.where((item) {
-                  if (query.isEmpty) {
-                    return true;
-                  }
-                  return item.title.toLowerCase().contains(query) ||
-                      (item.subtitle?.toLowerCase().contains(query) ?? false);
-                }).toList(growable: false);
+                final filtered = options
+                    .where((item) {
+                      if (query.isEmpty) {
+                        return true;
+                      }
+                      return item.title.toLowerCase().contains(query) ||
+                          (item.subtitle?.toLowerCase().contains(query) ??
+                              false);
+                    })
+                    .toList(growable: false);
                 final isWorkType = title == '选择工作类型';
                 return AppSurface(
                   padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
@@ -138,8 +144,7 @@ class TypeSelectorBar extends StatelessWidget {
                     children: [
                       SheetHeader(title: title),
                       Padding(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 20),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: TextField(
                           controller: searchController,
                           onChanged: (_) => setSheetState(() {}),
@@ -154,8 +159,10 @@ class TypeSelectorBar extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 24),
                           child: Center(
-                            child: Text('暂无可选项',
-                                style: theme.textTheme.bodyMedium),
+                            child: Text(
+                              '暂无可选项',
+                              style: theme.textTheme.bodyMedium,
+                            ),
                           ),
                         )
                       else
@@ -169,7 +176,9 @@ class TypeSelectorBar extends StatelessWidget {
                               return ListTile(
                                 leading: isWorkType
                                     ? WorkTypeIconBadge(
-                                        title: item.title, size: 26)
+                                        title: item.title,
+                                        size: 26,
+                                      )
                                     : const Icon(
                                         Icons.workspaces_rounded,
                                         color: Color(0xFF1F5DBD),
@@ -181,8 +190,7 @@ class TypeSelectorBar extends StatelessWidget {
                                 trailing: isSelected
                                     ? const Icon(Icons.check_rounded)
                                     : null,
-                                onTap: () =>
-                                    Navigator.of(context).pop(item),
+                                onTap: () => Navigator.of(context).pop(item),
                               );
                             },
                           ),

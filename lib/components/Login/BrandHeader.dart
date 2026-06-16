@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// 登录页顶部品牌区：圆形水獭剪影 logo + 应用名。
-/// 用 ColorFiltered 把黑色剪影转成纯白，贴在蓝色背景上。
 class BrandHeader extends StatelessWidget {
   const BrandHeader({super.key});
 
@@ -13,10 +11,7 @@ class BrandHeader extends StatelessWidget {
           width: 92,
           height: 92,
           child: ColorFiltered(
-            colorFilter: const ColorFilter.mode(
-              Colors.white,
-              BlendMode.srcIn,
-            ),
+            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
             child: Image.asset(
               'assets/images/otter_logo.png',
               fit: BoxFit.contain,

@@ -98,9 +98,7 @@ class _FilterTile extends StatelessWidget {
             child: Icon(filter.icon, color: palette.primary, size: 20),
           ),
           const SizedBox(width: 12),
-          Expanded(
-            child: Text(filter.title, style: theme.textTheme.bodyLarge),
-          ),
+          Expanded(child: Text(filter.title, style: theme.textTheme.bodyLarge)),
           Icon(
             Icons.star_border_rounded,
             color: palette.textSecondary,

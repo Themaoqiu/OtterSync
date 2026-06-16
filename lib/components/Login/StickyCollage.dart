@@ -13,14 +13,54 @@ class StickyCollage extends StatelessWidget {
     const ink = Color(0xFF222222);
 
     final tiles = <_StickyTile>[
-      const _StickyTile(color: orange, icon: _StickyIcon.triangle, ink: ink, rotate: -0.02),
-      const _StickyTile(color: purple, icon: _StickyIcon.dots, ink: ink, rotate: 0.04),
-      const _StickyTile(color: orange, icon: _StickyIcon.equals, ink: ink, rotate: 0.03),
-      const _StickyTile(color: green, icon: _StickyIcon.circle, ink: ink, rotate: -0.02),
-      const _StickyTile(color: purple, icon: _StickyIcon.arrow, ink: ink, rotate: 0.05),
-      const _StickyTile(color: orange, icon: _StickyIcon.square, ink: ink, rotate: -0.04),
-      const _StickyTile(color: green, icon: _StickyIcon.check, ink: ink, rotate: 0.02),
-      const _StickyTile(color: purple, icon: _StickyIcon.plus, ink: ink, rotate: -0.03),
+      const _StickyTile(
+        color: orange,
+        icon: _StickyIcon.triangle,
+        ink: ink,
+        rotate: -0.02,
+      ),
+      const _StickyTile(
+        color: purple,
+        icon: _StickyIcon.dots,
+        ink: ink,
+        rotate: 0.04,
+      ),
+      const _StickyTile(
+        color: orange,
+        icon: _StickyIcon.equals,
+        ink: ink,
+        rotate: 0.03,
+      ),
+      const _StickyTile(
+        color: green,
+        icon: _StickyIcon.circle,
+        ink: ink,
+        rotate: -0.02,
+      ),
+      const _StickyTile(
+        color: purple,
+        icon: _StickyIcon.arrow,
+        ink: ink,
+        rotate: 0.05,
+      ),
+      const _StickyTile(
+        color: orange,
+        icon: _StickyIcon.square,
+        ink: ink,
+        rotate: -0.04,
+      ),
+      const _StickyTile(
+        color: green,
+        icon: _StickyIcon.check,
+        ink: ink,
+        rotate: 0.02,
+      ),
+      const _StickyTile(
+        color: purple,
+        icon: _StickyIcon.plus,
+        ink: ink,
+        rotate: -0.03,
+      ),
     ];
 
     return GridView.count(
@@ -31,7 +71,7 @@ class StickyCollage extends StatelessWidget {
       mainAxisSpacing: 6,
       children: [
         tiles[0],
-        const SizedBox.shrink(), // 留一格空白让排版更随性
+        const SizedBox.shrink(),
         tiles[1],
         ...tiles.sublist(2),
       ],
@@ -70,7 +110,9 @@ class _StickyTile extends StatelessWidget {
               ),
             ],
           ),
-          child: CustomPaint(painter: _StickyPainter(icon: icon, ink: ink)),
+          child: CustomPaint(
+            painter: _StickyPainter(icon: icon, ink: ink),
+          ),
         ),
       ),
     );
@@ -107,28 +149,47 @@ class _StickyPainter extends CustomPainter {
       case _StickyIcon.dots:
         final dot = Paint()..color = ink;
         for (var i = -1; i <= 1; i++) {
-          canvas.drawCircle(Offset(c.dx + i * r * 0.7, c.dy),
-              size.shortestSide * 0.045, dot);
+          canvas.drawCircle(
+            Offset(c.dx + i * r * 0.7, c.dy),
+            size.shortestSide * 0.045,
+            dot,
+          );
         }
         break;
       case _StickyIcon.equals:
-        canvas.drawLine(Offset(c.dx - r, c.dy - r * 0.45),
-            Offset(c.dx + r, c.dy - r * 0.45), p);
-        canvas.drawLine(Offset(c.dx - r, c.dy + r * 0.45),
-            Offset(c.dx + r, c.dy + r * 0.45), p);
+        canvas.drawLine(
+          Offset(c.dx - r, c.dy - r * 0.45),
+          Offset(c.dx + r, c.dy - r * 0.45),
+          p,
+        );
+        canvas.drawLine(
+          Offset(c.dx - r, c.dy + r * 0.45),
+          Offset(c.dx + r, c.dy + r * 0.45),
+          p,
+        );
         break;
       case _StickyIcon.circle:
         canvas.drawCircle(c, r, p);
         break;
       case _StickyIcon.arrow:
         canvas.drawLine(Offset(c.dx, c.dy + r), Offset(c.dx, c.dy - r), p);
-        canvas.drawLine(Offset(c.dx, c.dy - r),
-            Offset(c.dx - r * 0.55, c.dy - r * 0.4), p);
-        canvas.drawLine(Offset(c.dx, c.dy - r),
-            Offset(c.dx + r * 0.55, c.dy - r * 0.4), p);
+        canvas.drawLine(
+          Offset(c.dx, c.dy - r),
+          Offset(c.dx - r * 0.55, c.dy - r * 0.4),
+          p,
+        );
+        canvas.drawLine(
+          Offset(c.dx, c.dy - r),
+          Offset(c.dx + r * 0.55, c.dy - r * 0.4),
+          p,
+        );
         break;
       case _StickyIcon.square:
-        final rect = Rect.fromCenter(center: c, width: r * 1.9, height: r * 1.9);
+        final rect = Rect.fromCenter(
+          center: c,
+          width: r * 1.9,
+          height: r * 1.9,
+        );
         canvas.drawRect(rect, p);
         break;
       case _StickyIcon.check:

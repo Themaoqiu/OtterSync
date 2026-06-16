@@ -71,8 +71,9 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             stat.label,
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: palette.textSecondary),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: palette.textSecondary,
+            ),
           ),
         ],
       ),

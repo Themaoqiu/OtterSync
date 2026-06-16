@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:ottersync/components/AiChat/AssistantAvatar.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 
-/// 用户消息：右对齐胶囊气泡，使用 surfaceInset，深浅模式自适应。
 class UserBubble extends StatelessWidget {
   const UserBubble({super.key, required this.text});
   final String text;
@@ -20,8 +19,7 @@ class UserBubble extends StatelessWidget {
             maxWidth: MediaQuery.of(context).size.width * 0.78,
           ),
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: palette.surfaceInset,
               borderRadius: BorderRadius.circular(20),
@@ -41,7 +39,6 @@ class UserBubble extends StatelessWidget {
   }
 }
 
-/// AI 消息：左侧 logo + 全宽行文，参考 ChatGPT 信件流。
 class AssistantRow extends StatelessWidget {
   const AssistantRow({super.key, required this.text});
   final String text;

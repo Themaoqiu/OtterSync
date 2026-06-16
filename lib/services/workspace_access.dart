@@ -20,10 +20,7 @@ bool canAccessWorkspaceData(
   return false;
 }
 
-bool shouldNotifyUser(
-  Map<String, dynamic> data, {
-  required String? uid,
-}) {
+bool shouldNotifyUser(Map<String, dynamic> data, {required String? uid}) {
   if (uid == null || uid.isEmpty) {
     return false;
   }

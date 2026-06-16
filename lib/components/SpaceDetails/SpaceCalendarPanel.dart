@@ -125,18 +125,20 @@ class SpaceCalendarPanel extends StatelessWidget {
 
   List<IssueSummary> _eventsForDay(DateTime day) {
     final target = DateTime(day.year, day.month, day.day);
-    return items.where((item) {
-      final start = item.startDate;
-      final due = item.dueDate;
-      if (start == null && due == null) return false;
-      final from = start == null
-          ? DateTime(due!.year, due.month, due.day)
-          : DateTime(start.year, start.month, start.day);
-      final to = due == null
-          ? DateTime(start!.year, start.month, start.day)
-          : DateTime(due.year, due.month, due.day);
-      return !target.isBefore(from) && !target.isAfter(to);
-    }).toList(growable: false);
+    return items
+        .where((item) {
+          final start = item.startDate;
+          final due = item.dueDate;
+          if (start == null && due == null) return false;
+          final from = start == null
+              ? DateTime(due!.year, due.month, due.day)
+              : DateTime(start.year, start.month, start.day);
+          final to = due == null
+              ? DateTime(start!.year, start.month, start.day)
+              : DateTime(due.year, due.month, due.day);
+          return !target.isBefore(from) && !target.isAfter(to);
+        })
+        .toList(growable: false);
   }
 }
 

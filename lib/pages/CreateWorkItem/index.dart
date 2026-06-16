@@ -10,7 +10,7 @@ import 'package:ottersync/components/Common/DatePickerSheet.dart';
 import 'package:ottersync/components/Common/EmptyStateView.dart';
 import 'package:ottersync/components/Common/SheetHeader.dart';
 import 'package:ottersync/theme/design_tokens.dart';
-import 'package:ottersync/viewmodels/work_item_api.dart';
+import 'package:ottersync/services/work_item_service.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
 
 class CreateWorkItemPage extends StatefulWidget {
@@ -27,7 +27,7 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
     AttachmentKind.document,
   ];
 
-  final WorkItemApi _api = WorkItemApi();
+  final WorkItemService _api = WorkItemService();
   final TextEditingController _summaryController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _newLabelsController = TextEditingController();
@@ -166,8 +166,9 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
                               _addAttachment(initialKind: AttachmentKind.photo),
                           onAddVideo: () =>
                               _addAttachment(initialKind: AttachmentKind.video),
-                          onAddDocument: () =>
-                              _addAttachment(initialKind: AttachmentKind.document),
+                          onAddDocument: () => _addAttachment(
+                            initialKind: AttachmentKind.document,
+                          ),
                           onAddScreen: () =>
                               _addAttachment(initialKind: AttachmentKind.video),
                           onDeleteAttachment: (index) {
@@ -253,12 +254,14 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
                           onPickStartDate: () => _pickDate(
                             title: '选择开始日期',
                             initial: _startDate,
-                            onPicked: (value) => setState(() => _startDate = value),
+                            onPicked: (value) =>
+                                setState(() => _startDate = value),
                           ),
                           onPickDueDate: () => _pickDate(
                             title: '选择截止日期',
                             initial: _dueDate,
-                            onPicked: (value) => setState(() => _dueDate = value),
+                            onPicked: (value) =>
+                                setState(() => _dueDate = value),
                           ),
                         ),
                       ],
@@ -374,10 +377,12 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
       if (!mounted) {
         return;
       }
-      setState(() => _sprintOptions = sprints
-          .where((sprint) => sprint.status != SprintStatus.completed)
-          .map((sprint) => sprint.toLookup())
-          .toList(growable: false));
+      setState(
+        () => _sprintOptions = sprints
+            .where((sprint) => sprint.status != SprintStatus.completed)
+            .map((sprint) => sprint.toLookup())
+            .toList(growable: false),
+      );
     } catch (_) {
       if (!mounted) {
         return;
@@ -674,16 +679,19 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
                         ),
                       if (allowClear)
                         ListTile(
-                          leading: Icon(Icons.clear_rounded,
-                              color: palette.textSecondary),
+                          leading: Icon(
+                            Icons.clear_rounded,
+                            color: palette.textSecondary,
+                          ),
                           title: const Text('清空'),
                           onTap: () => Navigator.of(context).pop(null),
                         ),
                       Flexible(
                         child: filtered.isEmpty
                             ? Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 32),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 32,
+                                ),
                                 child: Text(
                                   emptyLabel,
                                   style: theme.textTheme.bodyMedium,
@@ -701,8 +709,10 @@ class _CreateWorkItemPageState extends State<CreateWorkItemPage> {
                                         ? null
                                         : Text(item.subtitle!),
                                     trailing: isSelected
-                                        ? Icon(Icons.check_rounded,
-                                            color: palette.primary)
+                                        ? Icon(
+                                            Icons.check_rounded,
+                                            color: palette.primary,
+                                          )
                                         : null,
                                     onTap: () =>
                                         Navigator.of(context).pop(item),

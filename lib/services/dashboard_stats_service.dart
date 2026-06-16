@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
 
-/// 仪表盘四项统计的结果。
 class DashboardStatsResult {
   const DashboardStatsResult({
     required this.assigned,
@@ -16,15 +15,8 @@ class DashboardStatsResult {
   final int completedThisWeek;
 }
 
-/// 后台统计服务。
 ///
-/// 把仪表盘的工作量聚合放到独立的后台 Isolate 线程执行，避免在工作项
-/// 数量较大时阻塞 UI 线程。这里通过 Flutter 的 [compute] 启动一次性
-/// Isolate：它在线程内运行纯函数 [_aggregate]，算完把结果回传主线程。
 ///
-/// 由于 Isolate 之间只能传递可序列化的简单数据，[computeStats] 先把
-/// [IssueSummary] 列表降维成由 int 组成的「行记录」再发送，从根本上
-///规避了跨 Isolate 传递复杂对象的问题。
 class DashboardStatsService {
   const DashboardStatsService();
 
@@ -33,14 +25,14 @@ class DashboardStatsService {
     required List<IssueSummary> allItems,
   }) async {
     final now = DateTime.now();
-    // 序列化为后台线程可接收的纯数据：
-    // [statusIndex, dueDateMillis(-1 表示空), completedAtMillis(-1 表示空)]
     final rows = allItems
-        .map((item) => <int>[
-              item.statusKey.index,
-              item.dueDate?.millisecondsSinceEpoch ?? -1,
-              item.completedAt?.millisecondsSinceEpoch ?? -1,
-            ])
+        .map(
+          (item) => <int>[
+            item.statusKey.index,
+            item.dueDate?.millisecondsSinceEpoch ?? -1,
+            item.completedAt?.millisecondsSinceEpoch ?? -1,
+          ],
+        )
         .toList(growable: false);
 
     final payload = _StatsPayload(
@@ -49,7 +41,6 @@ class DashboardStatsService {
       rows: rows,
     );
 
-    // compute 会 spawn 一个后台 Isolate 运行 _aggregate。
     final counts = await compute(_aggregate, payload);
     return DashboardStatsResult(
       assigned: assignedCount,
@@ -72,7 +63,6 @@ class _StatsPayload {
   final List<List<int>> rows;
 }
 
-/// 在后台 Isolate 中运行的纯函数：遍历行记录算出三项计数。
 List<int> _aggregate(_StatsPayload payload) {
   final now = DateTime.fromMillisecondsSinceEpoch(payload.nowMillis);
   final today = DateTime(now.year, now.month, now.day);

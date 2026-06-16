@@ -12,15 +12,15 @@ import 'package:ottersync/components/SpaceDetails/SprintManagerSheet.dart';
 import 'package:ottersync/components/SpaceDetails/SummaryTabView.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
-import 'package:ottersync/viewmodels/work_item_api.dart';
+import 'package:ottersync/services/work_item_service.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
 
 class SpaceDetailsView extends StatefulWidget {
-  const SpaceDetailsView({super.key, this.spaceId, WorkItemApi? api})
+  const SpaceDetailsView({super.key, this.spaceId, WorkItemService? api})
     : _api = api;
 
   final int? spaceId;
-  final WorkItemApi? _api;
+  final WorkItemService? _api;
 
   @override
   State<SpaceDetailsView> createState() => _SpaceDetailsViewState();
@@ -28,7 +28,7 @@ class SpaceDetailsView extends StatefulWidget {
 
 class _SpaceDetailsViewState extends State<SpaceDetailsView>
     with SingleTickerProviderStateMixin {
-  late final WorkItemApi _api;
+  late final WorkItemService _api;
   late final TabController _tabController;
   JiraSpace? _space;
   List<SpaceSummaryMetric> _metrics = const [];
@@ -45,9 +45,8 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
   @override
   void initState() {
     super.initState();
-    _api = widget._api ?? WorkItemApi();
+    _api = widget._api ?? WorkItemService();
     _tabController = TabController(length: 6, vsync: this);
-    // 监听 Tab 切换：筛选按钮只在「面板」「待办事项列表」显示，需要随之重建 AppBar。
     _tabController.addListener(_handleTabChanged);
     _loadSpaceDetails();
   }
@@ -81,14 +80,10 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(width: 6),
-            Icon(
-              Icons.arrow_drop_down_rounded,
-              color: palette.textSecondary,
-            ),
+            Icon(Icons.arrow_drop_down_rounded, color: palette.textSecondary),
           ],
         ),
         actions: [
-          // 状态筛选只作用于「面板」(Tab 1) 和「待办事项列表」(Tab 3)，其它 Tab 隐藏。
           if (_currentTab == 1 || _currentTab == 3)
             IconButton(
               onPressed: _openStatusFilter,
@@ -145,24 +140,35 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
 
     final filteredGroups = _statusFilter == null
         ? _groups
-        : _groups.map((group) {
-            final filtered = group.items
-                .where((item) => item.statusKey == _statusFilter)
-                .toList(growable: false);
-            return BacklogGroup(
-              title: group.title,
-              issueCount: filtered.length,
-              todoCount: filtered.where((i) => i.statusKey == WorkItemStatus.todo).length,
-              inProgressCount: filtered.where((i) => i.statusKey == WorkItemStatus.inProgress).length,
-              doneCount: filtered.where((i) => i.statusKey == WorkItemStatus.done).length,
-              items: filtered,
-              sprintId: group.sprintId,
-            );
-          }).where((g) => g.items.isNotEmpty || g.sprintId == null).toList(growable: false);
+        : _groups
+              .map((group) {
+                final filtered = group.items
+                    .where((item) => item.statusKey == _statusFilter)
+                    .toList(growable: false);
+                return BacklogGroup(
+                  title: group.title,
+                  issueCount: filtered.length,
+                  todoCount: filtered
+                      .where((i) => i.statusKey == WorkItemStatus.todo)
+                      .length,
+                  inProgressCount: filtered
+                      .where((i) => i.statusKey == WorkItemStatus.inProgress)
+                      .length,
+                  doneCount: filtered
+                      .where((i) => i.statusKey == WorkItemStatus.done)
+                      .length,
+                  items: filtered,
+                  sprintId: group.sprintId,
+                );
+              })
+              .where((g) => g.items.isNotEmpty || g.sprintId == null)
+              .toList(growable: false);
 
     final filteredBoardItems = _statusFilter == null
         ? _boardItems
-        : _boardItems.where((item) => item.statusKey == _statusFilter).toList(growable: false);
+        : _boardItems
+              .where((item) => item.statusKey == _statusFilter)
+              .toList(growable: false);
 
     final statusCounts = <WorkItemStatus, int>{};
     for (final s in WorkItemStatus.values) {
@@ -177,58 +183,58 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
     return RefreshIndicator(
       onRefresh: _loadSpaceDetails,
       child: TabBarView(
-      controller: _tabController,
-      children: [
-        SummaryTabView(
-          metrics: _metrics,
-          statusCounts: statusCounts,
-          priorityCounts: priorityCounts,
-          onMetricTap: (index) => _tabController.animateTo(_metricToTab(index)),
-          onStatusTap: (status) {
-            setState(() => _statusFilter = status);
-            _tabController.animateTo(3);
-          },
-          onPriorityTap: (label) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('已筛选优先级：$label（仅在数据存在时生效）')),
-            );
-          },
-        ),
-        BoardTabView(
-          sprints: _sprints,
-          items: filteredBoardItems,
-          onOpenSprintManager: _openSprintManager,
-          onItemTap: _openWorkItem,
-          onItemStatusChanged: _onItemStatusChanged,
-        ),
-        CalendarTabView(
-          items: _calendarItems,
-          onItemTap: _openWorkItem,
-          onScheduleItem: _scheduleItemDueDate,
-        ),
-        if (filteredGroups.isEmpty)
-          EmptyStateView(
-            icon: Icons.view_list_outlined,
-            title: _statusFilter != null ? '没有匹配的工作项' : '还没有待办事项',
-            description: _statusFilter != null ? '该状态下没有工作项。' : '当这个空间下有真实数据库任务后，会显示在这里。',
-          )
-        else
-          BacklogTabView(
-            groups: filteredGroups,
-            onCreate: _createBacklogItemForGroup,
-            onItemTap: _openWorkItem,
-            onToggleDone: _toggleItemDone,
+        controller: _tabController,
+        children: [
+          SummaryTabView(
+            metrics: _metrics,
+            statusCounts: statusCounts,
+            priorityCounts: priorityCounts,
+            onMetricTap: (index) =>
+                _tabController.animateTo(_metricToTab(index)),
+            onStatusTap: (status) {
+              setState(() => _statusFilter = status);
+              _tabController.animateTo(3);
+            },
+            onPriorityTap: (label) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('已筛选优先级：$label（仅在数据存在时生效）')),
+              );
+            },
           ),
-        ReportTabView(
-          spaceKey: _space?.key ?? 'OT',
-          sprints: _sprints,
-          items: _allItems,
-        ),
-        SettingsTabView(
-          space: _space!,
-          onInviteMember: _inviteMember,
-        ),
-      ],
+          BoardTabView(
+            sprints: _sprints,
+            items: filteredBoardItems,
+            onOpenSprintManager: _openSprintManager,
+            onItemTap: _openWorkItem,
+            onItemStatusChanged: _onItemStatusChanged,
+          ),
+          CalendarTabView(
+            items: _calendarItems,
+            onItemTap: _openWorkItem,
+            onScheduleItem: _scheduleItemDueDate,
+          ),
+          if (filteredGroups.isEmpty)
+            EmptyStateView(
+              icon: Icons.view_list_outlined,
+              title: _statusFilter != null ? '没有匹配的工作项' : '还没有待办事项',
+              description: _statusFilter != null
+                  ? '该状态下没有工作项。'
+                  : '当这个空间下有真实数据库任务后，会显示在这里。',
+            )
+          else
+            BacklogTabView(
+              groups: filteredGroups,
+              onCreate: _createBacklogItemForGroup,
+              onItemTap: _openWorkItem,
+              onToggleDone: _toggleItemDone,
+            ),
+          ReportTabView(
+            spaceKey: _space?.key ?? 'OT',
+            sprints: _sprints,
+            items: _allItems,
+          ),
+          SettingsTabView(space: _space!, onInviteMember: _inviteMember),
+        ],
       ),
     );
   }
@@ -258,8 +264,10 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
           children: [
             const SheetHeader(title: '空间操作'),
             ListTile(
-              leading: Icon(Icons.person_add_alt_1_rounded,
-                  color: palette.primary),
+              leading: Icon(
+                Icons.person_add_alt_1_rounded,
+                color: palette.primary,
+              ),
               title: const Text('邀请成员协作'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -275,8 +283,7 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.flag_rounded,
-                  color: Color(0xFF1F5DBD)),
+              leading: const Icon(Icons.flag_rounded, color: Color(0xFF1F5DBD)),
               title: const Text('管理冲刺'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -284,12 +291,8 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
               },
             ),
             ListTile(
-              leading:
-                  Icon(Icons.delete_rounded, color: palette.danger),
-              title: Text(
-                '删除空间',
-                style: TextStyle(color: palette.danger),
-              ),
+              leading: Icon(Icons.delete_rounded, color: palette.danger),
+              title: Text('删除空间', style: TextStyle(color: palette.danger)),
               onTap: () {
                 Navigator.pop(ctx);
                 _confirmDeleteSpace();
@@ -330,15 +333,15 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
     try {
       await _api.updateWorkspace(_space!.id, name: result);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('空间名称已更新')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('空间名称已更新')));
       await _loadSpaceDetails();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('更新失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('更新失败：$e')));
     }
   }
 
@@ -368,15 +371,15 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
     try {
       await _api.deleteWorkspace(_space!.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('空间已删除')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('空间已删除')));
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('删除失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('删除失败：$e')));
     }
   }
 
@@ -395,7 +398,9 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
   }
 
   Future<void> _createBacklogItemForGroup(
-      BacklogGroup group, String summary) async {
+    BacklogGroup group,
+    String summary,
+  ) async {
     if (_space == null) return;
     try {
       final created = await _api.createBacklogItem(
@@ -404,7 +409,6 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
         sprintId: group.sprintId,
       );
       if (!mounted) return;
-      // 局部更新：只刷新 backlog 与全部数据，避免整页 loading
       final groups = await _api.loadBacklogGroups(_space!.id);
       final allItems = await _api.loadCalendarItems(_space!.id);
       final boardItems = await _api.loadBoardItems(_space!.id);
@@ -415,14 +419,14 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
         _calendarItems = allItems;
         _boardItems = boardItems;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已创建 ${created.key}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('已创建 ${created.key}')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('创建失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('创建失败：$e')));
     }
   }
 
@@ -434,29 +438,35 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
       await _api.updateWorkItemStatus(item.id!, newStatus);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('更新失败：$e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('更新失败：$e')));
     }
   }
 
   Future<void> _onItemStatusChanged(
-      IssueSummary item, WorkItemStatus status) async {
+    IssueSummary item,
+    WorkItemStatus status,
+  ) async {
     if (item.id == null) return;
     _applyLocalStatus(item.id!, status);
     try {
       await _api.updateWorkItemStatus(item.id!, status);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('更新失败：$e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('更新失败：$e')));
     }
   }
 
   Future<void> _scheduleItemDueDate(
-      IssueSummary item, DateTime? startDate, DateTime? dueDate) async {
+    IssueSummary item,
+    DateTime? startDate,
+    DateTime? dueDate,
+  ) async {
     if (item.id == null) return;
     final clearing = startDate == null && dueDate == null;
-    // copyWith 无法把字段重置为 null，这里直接重建以确保本地状态与服务端一致。
     final patched = IssueSummary(
       id: item.id,
       title: item.title,
@@ -500,14 +510,14 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
       final msg = clearing
           ? '已取消安排'
           : startDate == null
-              ? '已安排到 ${dueDate!.month}/${dueDate.day}'
-              : '已安排 ${startDate.month}/${startDate.day} ~ ${dueDate!.month}/${dueDate.day}';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(msg)));
+          ? '已安排到 ${dueDate!.month}/${dueDate.day}'
+          : '已安排 ${startDate.month}/${startDate.day} ~ ${dueDate!.month}/${dueDate.day}';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('更新失败：$e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('更新失败：$e')));
     }
   }
 
@@ -525,13 +535,15 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
             return BacklogGroup(
               title: g.title,
               issueCount: items.length,
-              todoCount:
-                  items.where((i) => i.statusKey == WorkItemStatus.todo).length,
+              todoCount: items
+                  .where((i) => i.statusKey == WorkItemStatus.todo)
+                  .length,
               inProgressCount: items
                   .where((i) => i.statusKey == WorkItemStatus.inProgress)
                   .length,
-              doneCount:
-                  items.where((i) => i.statusKey == WorkItemStatus.done).length,
+              doneCount: items
+                  .where((i) => i.statusKey == WorkItemStatus.done)
+                  .length,
               items: items,
               sprintId: g.sprintId,
             );
@@ -543,10 +555,7 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
   (IconData, Color) _statusVisual(WorkItemStatus status) {
     switch (status) {
       case WorkItemStatus.todo:
-        return (
-          Icons.radio_button_unchecked_rounded,
-          const Color(0xFF44546F),
-        );
+        return (Icons.radio_button_unchecked_rounded, const Color(0xFF44546F));
       case WorkItemStatus.inProgress:
         return (Icons.timelapse_rounded, const Color(0xFF1F5DBD));
       case WorkItemStatus.done:
@@ -571,8 +580,10 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
             const SheetHeader(title: '按状态筛选'),
             ListTile(
               title: const Text('全部'),
-              leading: const Icon(Icons.all_inclusive_rounded,
-                  color: Color(0xFF44546F)),
+              leading: const Icon(
+                Icons.all_inclusive_rounded,
+                color: Color(0xFF44546F),
+              ),
               trailing: _statusFilter == null
                   ? Icon(Icons.check_rounded, color: palette.primary)
                   : null,
@@ -581,22 +592,20 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
                 Navigator.pop(ctx);
               },
             ),
-            ...WorkItemStatus.values.map(
-              (status) {
-                final (icon, color) = _statusVisual(status);
-                return ListTile(
-                  title: Text(workItemStatusLabel(status)),
-                  leading: Icon(icon, color: color),
-                  trailing: _statusFilter == status
-                      ? Icon(Icons.check_rounded, color: palette.primary)
-                      : null,
-                  onTap: () {
-                    setState(() => _statusFilter = status);
-                    Navigator.pop(ctx);
-                  },
-                );
-              },
-            ),
+            ...WorkItemStatus.values.map((status) {
+              final (icon, color) = _statusVisual(status);
+              return ListTile(
+                title: Text(workItemStatusLabel(status)),
+                leading: Icon(icon, color: color),
+                trailing: _statusFilter == status
+                    ? Icon(Icons.check_rounded, color: palette.primary)
+                    : null,
+                onTap: () {
+                  setState(() => _statusFilter = status);
+                  Navigator.pop(ctx);
+                },
+              );
+            }),
             const SizedBox(height: 8),
           ],
         ),
@@ -610,15 +619,12 @@ class _SpaceDetailsViewState extends State<SpaceDetailsView>
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (ctx) => InviteMemberSheet(
-        api: _api,
-        workspaceId: _space!.id,
-      ),
+      builder: (ctx) => InviteMemberSheet(api: _api, workspaceId: _space!.id),
     );
     if (email == null || !mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已邀请 $email')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('已邀请 $email')));
   }
 
   Future<void> _loadSpaceDetails() async {

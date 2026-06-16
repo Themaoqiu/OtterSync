@@ -16,19 +16,19 @@ import 'package:ottersync/services/app_event_bus.dart';
 import 'package:ottersync/state/shell_scope.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
-import 'package:ottersync/viewmodels/work_item_api.dart';
+import 'package:ottersync/services/work_item_service.dart';
 
 class HomeView extends StatefulWidget {
-  const HomeView({super.key, WorkItemApi? api}) : _api = api;
+  const HomeView({super.key, WorkItemService? api}) : _api = api;
 
-  final WorkItemApi? _api;
+  final WorkItemService? _api;
 
   @override
   State<HomeView> createState() => _HomeViewState();
 }
 
 class _HomeViewState extends State<HomeView> {
-  late final WorkItemApi _api;
+  late final WorkItemService _api;
   bool _overviewExpanded = true;
   bool _quickAccessExpanded = true;
   bool _loading = true;
@@ -44,16 +44,16 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    _api = widget._api ?? WorkItemApi();
+    _api = widget._api ?? WorkItemService();
     _loadHomeData();
-    _eventSub = AppEventBus.instance.on({
-      AppEventType.workItemCreated,
-      AppEventType.workItemUpdated,
-    }, (event) {
-      if (mounted) {
-        _loadHomeData();
-      }
-    });
+    _eventSub = AppEventBus.instance.on(
+      {AppEventType.workItemCreated, AppEventType.workItemUpdated},
+      (event) {
+        if (mounted) {
+          _loadHomeData();
+        }
+      },
+    );
   }
 
   @override
@@ -84,9 +84,9 @@ class _HomeViewState extends State<HomeView> {
             child: RefreshIndicator(
               onRefresh: _loadHomeData,
               child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
-            physics: const AlwaysScrollableScrollPhysics(),
-            children: [
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
                   SectionHeader(
                     title: '今日概述',
                     expanded: _overviewExpanded,
@@ -171,7 +171,10 @@ class _HomeViewState extends State<HomeView> {
                                     navigateOrSwitchTab(context, item.route!);
                                     return;
                                   }
-                                  showDemoFeedback(context, '${item.title} 交互入口已预留。');
+                                  showDemoFeedback(
+                                    context,
+                                    '${item.title} 交互入口已预留。',
+                                  );
                                 },
                               ),
                             ],
@@ -182,7 +185,8 @@ class _HomeViewState extends State<HomeView> {
                   const SizedBox(height: 12),
                   HomeActivitySwitcher(
                     mode: _activityMode,
-                    onModeChanged: (mode) => setState(() => _activityMode = mode),
+                    onModeChanged: (mode) =>
+                        setState(() => _activityMode = mode),
                   ),
                   if (_activityMode == HomeActivityMode.viewed) ...[
                     const SizedBox(height: 18),
@@ -236,18 +240,15 @@ class _HomeViewState extends State<HomeView> {
               ),
             ),
           ),
-          ),
-          ],
-        );
+        ),
+      ],
+    );
   }
 
   Widget _buildErrorState() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Text(
-        _error ?? '',
-        textAlign: TextAlign.center,
-      ),
+      child: Text(_error ?? '', textAlign: TextAlign.center),
     );
   }
 
@@ -335,7 +336,8 @@ class _HomeViewState extends State<HomeView> {
 
     DateTime? viewedTime(IssueSummary i) => i.lastViewedAt ?? i.createdAt;
 
-    final sorted = [..._viewedItems]..sort((a, b) {
+    final sorted = [..._viewedItems]
+      ..sort((a, b) {
         final ta = viewedTime(a);
         final tb = viewedTime(b);
         if (ta == null && tb == null) return 0;
@@ -360,8 +362,18 @@ class _HomeViewState extends State<HomeView> {
 
     String monthLabel(DateTime d) {
       const names = [
-        '一月', '二月', '三月', '四月', '五月', '六月',
-        '七月', '八月', '九月', '十月', '十一月', '十二月',
+        '一月',
+        '二月',
+        '三月',
+        '四月',
+        '五月',
+        '六月',
+        '七月',
+        '八月',
+        '九月',
+        '十月',
+        '十一月',
+        '十二月',
       ];
       final m = names[d.month - 1];
       return d.year == now.year ? m : '${d.year} 年 $m';
@@ -412,10 +424,14 @@ class _HomeViewState extends State<HomeView> {
     for (final label in order) {
       if (!firstSection) widgets.add(const SizedBox(height: 18));
       firstSection = false;
-      widgets.add(Text(
-        label,
-        style: theme.textTheme.titleMedium?.copyWith(color: palette.textPrimary),
-      ));
+      widgets.add(
+        Text(
+          label,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: palette.textPrimary,
+          ),
+        ),
+      );
       widgets.add(const SizedBox(height: 10));
       if (label == order.first) {
         appendCard([filter, ...groups[label]!]);

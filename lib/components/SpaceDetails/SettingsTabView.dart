@@ -49,10 +49,7 @@ class SettingsTabView extends StatelessWidget {
 }
 
 class _SettingRow extends StatelessWidget {
-  const _SettingRow({
-    required this.label,
-    required this.value,
-  });
+  const _SettingRow({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -63,9 +60,7 @@ class _SettingRow extends StatelessWidget {
 
     return Row(
       children: [
-        Expanded(
-          child: Text(label, style: theme.textTheme.bodyMedium),
-        ),
+        Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
         Text(value, style: theme.textTheme.bodyLarge),
       ],
     );

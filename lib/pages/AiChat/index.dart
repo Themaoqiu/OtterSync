@@ -21,8 +21,6 @@ class _AiChatViewState extends State<AiChatView> {
   final FocusNode _inputFocus = FocusNode();
   final ScrollController _scroll = ScrollController();
 
-  // OpenAI message history（含 system / user / assistant / tool）。
-  // tool 消息用户不可见，仅在传给模型时使用。
   final List<Map<String, dynamic>> _history = [];
   final List<_VisibleMessage> _visible = [];
 
@@ -61,13 +59,17 @@ class _AiChatViewState extends State<AiChatView> {
         scrolledUnderElevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.of(context).maybePop(),
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
-              color: palette.textPrimary, size: 20),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: palette.textPrimary,
+            size: 20,
+          ),
         ),
         title: Text(
           'AI 助手',
-          style: theme.textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w600),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
         centerTitle: true,
         actions: [
@@ -75,8 +77,11 @@ class _AiChatViewState extends State<AiChatView> {
             IconButton(
               tooltip: '新对话',
               onPressed: _resetConversation,
-              icon: Icon(Icons.add_comment_outlined,
-                  color: palette.textPrimary, size: 22),
+              icon: Icon(
+                Icons.add_comment_outlined,
+                color: palette.textPrimary,
+                size: 22,
+              ),
             ),
           const SizedBox(width: 4),
         ],
@@ -91,8 +96,9 @@ class _AiChatViewState extends State<AiChatView> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
                 _error!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: palette.danger),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: palette.danger,
+                ),
               ),
             ),
           Composer(

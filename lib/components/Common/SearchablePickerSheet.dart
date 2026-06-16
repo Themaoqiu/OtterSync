@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:ottersync/components/Common/SheetHeader.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 
-/// 可搜索选择器的一个选项。
 class PickerEntry<T> {
   const PickerEntry({
     required this.value,
@@ -19,10 +18,7 @@ class PickerEntry<T> {
   final Color? iconColor;
 }
 
-/// 通用的「从列表里选一项」底部弹窗：带标题、可搜索、空状态。
 ///
-/// 智能显隐搜索框：选项数 > [searchThreshold]（默认 5）时才显示搜索框，
-/// 小列表保持简洁。返回选中项的 value；用户关闭弹窗时返回 null。
 Future<T?> showSearchablePicker<T>({
   required BuildContext context,
   required String title,
@@ -53,10 +49,13 @@ Future<T?> showSearchablePicker<T>({
                 final filtered = query.isEmpty
                     ? entries
                     : entries
-                        .where((e) =>
-                            e.label.toLowerCase().contains(query) ||
-                            (e.subtitle?.toLowerCase().contains(query) ?? false))
-                        .toList(growable: false);
+                          .where(
+                            (e) =>
+                                e.label.toLowerCase().contains(query) ||
+                                (e.subtitle?.toLowerCase().contains(query) ??
+                                    false),
+                          )
+                          .toList(growable: false);
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -93,14 +92,19 @@ Future<T?> showSearchablePicker<T>({
                                 return ListTile(
                                   leading: entry.icon == null
                                       ? null
-                                      : Icon(entry.icon, color: entry.iconColor),
+                                      : Icon(
+                                          entry.icon,
+                                          color: entry.iconColor,
+                                        ),
                                   title: Text(entry.label),
                                   subtitle: entry.subtitle == null
                                       ? null
                                       : Text(entry.subtitle!),
                                   trailing: selected
-                                      ? Icon(Icons.check_rounded,
-                                          color: palette.primary)
+                                      ? Icon(
+                                          Icons.check_rounded,
+                                          color: palette.primary,
+                                        )
                                       : null,
                                   onTap: () =>
                                       Navigator.of(context).pop(entry.value),

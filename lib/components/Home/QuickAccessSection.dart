@@ -92,11 +92,7 @@ class QuickAccessSection extends StatelessWidget {
 }
 
 class _FeatureIcon extends StatelessWidget {
-  const _FeatureIcon({
-    required this.icon,
-    required this.color,
-    this.iconTint,
-  });
+  const _FeatureIcon({required this.icon, required this.color, this.iconTint});
 
   final IconData icon;
   final Color color;

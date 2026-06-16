@@ -3,19 +3,16 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:ottersync/viewmodels/jira_models.dart';
-import 'package:ottersync/viewmodels/work_item_api.dart';
+import 'package:ottersync/services/work_item_service.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
 
-/// 暴露给模型的本地工作项操作集合。
 ///
-/// 每个工具的 schema 都遵循 OpenAI function calling 规范，
-/// 工具调用结果以字符串形式回传，由 LLM 决定下一步。
 class AiChatService {
-  AiChatService({WorkItemApi? api, http.Client? client})
-      : _api = api ?? WorkItemApi(),
-        _http = client ?? http.Client();
+  AiChatService({WorkItemService? api, http.Client? client})
+    : _api = api ?? WorkItemService(),
+      _http = client ?? http.Client();
 
-  final WorkItemApi _api;
+  final WorkItemService _api;
   final http.Client _http;
 
   String get _apiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
@@ -23,8 +20,7 @@ class AiChatService {
   String get _baseUrl =>
       dotenv.env['OPENAI_BASE_URL'] ?? 'https://api.openai.com/v1';
 
-  bool get configured =>
-      _apiKey.isNotEmpty && !_apiKey.startsWith('sk-...');
+  bool get configured => _apiKey.isNotEmpty && !_apiKey.startsWith('sk-...');
 
   static final List<Map<String, dynamic>> _tools = [
     {
@@ -74,7 +70,7 @@ class AiChatService {
         'name': 'create_work_item',
         'description':
             '在指定空间创建工作项。在调用之前必须明确 workspace_id、work_type_id、summary。'
-                '若用户未提供则先用 list_* 工具查询并向用户确认。',
+            '若用户未提供则先用 list_* 工具查询并向用户确认。',
         'parameters': {
           'type': 'object',
           'properties': {
@@ -104,10 +100,7 @@ class AiChatService {
     },
   ];
 
-  /// 给定历史消息，调用模型并执行 tool 调用直到拿到最终回复。
   ///
-  /// `messages` 应已经包含 system prompt 和用户输入。
-  /// 返回最终的 assistant 文本，并把过程中的 tool 调用追加到 `messages`。
   Future<String> respond(List<Map<String, dynamic>> messages) async {
     if (!configured) {
       throw const AiChatException(
@@ -115,13 +108,12 @@ class AiChatService {
       );
     }
 
-    // 多轮 tool calling 循环，最多 6 轮防止意外死循环。
     for (var i = 0; i < 6; i++) {
       final response = await _callOpenAi(messages);
-      final choice = (response['choices'] as List).first as Map<String, dynamic>;
+      final choice =
+          (response['choices'] as List).first as Map<String, dynamic>;
       final message = choice['message'] as Map<String, dynamic>;
 
-      // 把 assistant 消息（含潜在 tool_calls）加入历史。
       messages.add({
         'role': 'assistant',
         if (message['content'] != null) 'content': message['content'],
@@ -168,9 +160,7 @@ class AiChatService {
       }),
     );
     if (res.statusCode >= 400) {
-      throw AiChatException(
-        'OpenAI 调用失败 (${res.statusCode})：${res.body}',
-      );
+      throw AiChatException('OpenAI 调用失败 (${res.statusCode})：${res.body}');
     }
     return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
   }
@@ -189,32 +179,38 @@ class AiChatService {
       switch (name) {
         case 'list_spaces':
           final spaces = await _api.listSpaces();
-          return jsonEncode(spaces
-              .map((s) => {'id': s.id, 'name': s.name, 'key': s.key})
-              .toList());
+          return jsonEncode(
+            spaces
+                .map((s) => {'id': s.id, 'name': s.name, 'key': s.key})
+                .toList(),
+          );
         case 'list_work_types':
           final lookups = await _api.loadCreateLookups();
-          return jsonEncode(lookups.workTypes
-              .map((o) => {'id': o.id, 'title': o.title, 'subtitle': o.subtitle})
-              .toList());
+          return jsonEncode(
+            lookups.workTypes
+                .map(
+                  (o) => {'id': o.id, 'title': o.title, 'subtitle': o.subtitle},
+                )
+                .toList(),
+          );
         case 'list_sprints':
           final wsId = (args['workspace_id'] as num?)?.toInt();
           if (wsId == null) {
             return jsonEncode({'error': '缺少 workspace_id'});
           }
           final sprints = await _api.listSprints(workspaceId: wsId);
-          return jsonEncode(sprints
-              .map((s) => {
-                    'id': s.id,
-                    'name': s.name,
-                    'status': s.status.name,
-                  })
-              .toList());
+          return jsonEncode(
+            sprints
+                .map(
+                  (s) => {'id': s.id, 'name': s.name, 'status': s.status.name},
+                )
+                .toList(),
+          );
         case 'list_users':
           final lookups = await _api.loadCreateLookups();
-          return jsonEncode(lookups.users
-              .map((o) => {'id': o.id, 'title': o.title})
-              .toList());
+          return jsonEncode(
+            lookups.users.map((o) => {'id': o.id, 'title': o.title}).toList(),
+          );
         case 'create_work_item':
           return await _createWorkItem(args);
       }
@@ -234,7 +230,8 @@ class AiChatService {
         'error': 'workspace_id / work_type_id / summary 必须全部提供。',
       });
     }
-    final reporterId = (args['reporter_id'] as num?)?.toInt() ??
+    final reporterId =
+        (args['reporter_id'] as num?)?.toInt() ??
         (lookups.users.isNotEmpty ? lookups.users.first.id : 1);
 
     DateTime? parseDate(Object? raw) {
@@ -256,7 +253,9 @@ class AiChatService {
         reporterId: reporterId,
         assigneeId: (args['assignee_id'] as num?)?.toInt(),
         sprintId: sprintId,
-        bucket: sprintId != null ? WorkItemBucket.sprint : WorkItemBucket.backlog,
+        bucket: sprintId != null
+            ? WorkItemBucket.sprint
+            : WorkItemBucket.backlog,
         startDate: parseDate(args['start_date']),
         dueDate: parseDate(args['due_date']),
       ),
@@ -278,7 +277,6 @@ class AiChatException implements Exception {
   String toString() => message;
 }
 
-/// 默认系统提示，告诉模型自己的身份与约束。
 String defaultSystemPrompt(DateTime now) {
   final today =
       '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';

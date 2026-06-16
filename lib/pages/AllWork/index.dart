@@ -12,7 +12,7 @@ import 'package:ottersync/components/Common/demo_feedback.dart';
 import 'package:ottersync/services/app_event_bus.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
-import 'package:ottersync/viewmodels/work_item_api.dart';
+import 'package:ottersync/services/work_item_service.dart';
 
 const _filters = [
   FilterItem(title: '所有工作项', icon: Icons.inventory_2_outlined),
@@ -31,7 +31,7 @@ class AllWorkView extends StatefulWidget {
 }
 
 class _AllWorkViewState extends State<AllWorkView> {
-  final WorkItemApi _api = WorkItemApi();
+  final WorkItemService _api = WorkItemService();
   FilterItem _selectedFilter = _filters.first;
   AllWorkViewMode _viewMode = AllWorkViewMode.list;
   List<IssueSummary> _workItems = const [];
@@ -43,14 +43,14 @@ class _AllWorkViewState extends State<AllWorkView> {
   void initState() {
     super.initState();
     _loadWorkItems();
-    _eventSub = AppEventBus.instance.on({
-      AppEventType.workItemCreated,
-      AppEventType.workItemUpdated,
-    }, (event) {
-      if (mounted) {
-        _loadWorkItems();
-      }
-    });
+    _eventSub = AppEventBus.instance.on(
+      {AppEventType.workItemCreated, AppEventType.workItemUpdated},
+      (event) {
+        if (mounted) {
+          _loadWorkItems();
+        }
+      },
+    );
   }
 
   @override
@@ -97,8 +97,10 @@ class _AllWorkViewState extends State<AllWorkView> {
                         setState(() => _viewMode = mode),
                   ),
                   const SizedBox(height: 20),
-                  Text(_selectedFilter.title,
-                      style: theme.textTheme.titleMedium),
+                  Text(
+                    _selectedFilter.title,
+                    style: theme.textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 16),
                   _buildContent(theme),
                 ],
@@ -126,10 +128,7 @@ class _AllWorkViewState extends State<AllWorkView> {
             const SizedBox(height: 8),
             Text(_error!, style: theme.textTheme.bodyMedium),
             const SizedBox(height: 14),
-            FilledButton(
-              onPressed: _loadWorkItems,
-              child: const Text('重试'),
-            ),
+            FilledButton(onPressed: _loadWorkItems, child: const Text('重试')),
           ],
         ),
       );
@@ -202,8 +201,7 @@ class _AllWorkViewState extends State<AllWorkView> {
                     style: theme.textTheme.titleMedium?.copyWith(
                       height: 1.3,
                       color: done ? palette.textSecondary : null,
-                      decoration:
-                          done ? TextDecoration.lineThrough : null,
+                      decoration: done ? TextDecoration.lineThrough : null,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -246,7 +244,10 @@ class _AllWorkViewState extends State<AllWorkView> {
             return false;
           }
           final dueDay = DateTime(
-              item.dueDate!.year, item.dueDate!.month, item.dueDate!.day);
+            item.dueDate!.year,
+            item.dueDate!.month,
+            item.dueDate!.day,
+          );
           final diff = dueDay.difference(today).inDays;
           return diff >= 0 && diff <= 3;
         }).toList();
@@ -282,12 +283,14 @@ class _AllWorkViewState extends State<AllWorkView> {
     final previous = _workItems;
     setState(() {
       _workItems = _workItems
-          .map((i) => i.id == item.id
-              ? i.copyWith(
-                  statusKey: newStatus,
-                  status: workItemStatusLabel(newStatus),
-                )
-              : i)
+          .map(
+            (i) => i.id == item.id
+                ? i.copyWith(
+                    statusKey: newStatus,
+                    status: workItemStatusLabel(newStatus),
+                  )
+                : i,
+          )
           .toList(growable: false);
     });
     try {
@@ -295,8 +298,9 @@ class _AllWorkViewState extends State<AllWorkView> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _workItems = previous);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('更新失败：$error')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('更新失败：$error')));
     }
   }
 
@@ -370,10 +374,12 @@ class _GridCheckbox extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: onTap,
-          splashColor: (done ? Colors.white : palette.primary)
-              .withValues(alpha: 0.22),
-          highlightColor: (done ? Colors.white : palette.primary)
-              .withValues(alpha: 0.1),
+          splashColor: (done ? Colors.white : palette.primary).withValues(
+            alpha: 0.22,
+          ),
+          highlightColor: (done ? Colors.white : palette.primary).withValues(
+            alpha: 0.1,
+          ),
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: AnimatedSwitcher(

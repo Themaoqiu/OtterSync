@@ -11,20 +11,20 @@ import 'package:ottersync/components/Spaces/SpaceCard.dart';
 import 'package:ottersync/services/app_event_bus.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
-import 'package:ottersync/viewmodels/work_item_api.dart';
+import 'package:ottersync/services/work_item_service.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
 
 class SpacesView extends StatefulWidget {
-  const SpacesView({super.key, WorkItemApi? api}) : _api = api;
+  const SpacesView({super.key, WorkItemService? api}) : _api = api;
 
-  final WorkItemApi? _api;
+  final WorkItemService? _api;
 
   @override
   State<SpacesView> createState() => _SpacesViewState();
 }
 
 class _SpacesViewState extends State<SpacesView> {
-  late final WorkItemApi _api;
+  late final WorkItemService _api;
   List<JiraSpace> _spaces = const [];
   bool _loading = true;
   String? _error;
@@ -33,18 +33,20 @@ class _SpacesViewState extends State<SpacesView> {
   @override
   void initState() {
     super.initState();
-    _api = widget._api ?? WorkItemApi();
+    _api = widget._api ?? WorkItemService();
     _loadSpaces();
-    // 注册广播接收：工作项 / 空间 / 成员关系变化时静默刷新列表。
-    _eventSub = AppEventBus.instance.on({
-      AppEventType.workItemCreated,
-      AppEventType.workspaceCreated,
-      AppEventType.workspaceMembershipChanged,
-    }, (event) {
-      if (mounted) {
-        _loadSpaces();
-      }
-    });
+    _eventSub = AppEventBus.instance.on(
+      {
+        AppEventType.workItemCreated,
+        AppEventType.workspaceCreated,
+        AppEventType.workspaceMembershipChanged,
+      },
+      (event) {
+        if (mounted) {
+          _loadSpaces();
+        }
+      },
+    );
   }
 
   @override
@@ -84,26 +86,26 @@ class _SpacesViewState extends State<SpacesView> {
                 child: RefreshIndicator(
                   onRefresh: _loadSpaces,
                   child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  const SizedBox(height: 8),
-                  const SectionHeader(
-                    title: '最近查看',
-                    action: Icon(Icons.more_horiz_rounded),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      const SizedBox(height: 8),
+                      const SectionHeader(
+                        title: '最近查看',
+                        action: Icon(Icons.more_horiz_rounded),
+                      ),
+                      const SizedBox(height: 16),
+                      ..._buildRecentSection(context),
+                      const SizedBox(height: 36),
+                      const SectionHeader(
+                        title: '所有空间',
+                        action: Icon(Icons.more_horiz_rounded),
+                      ),
+                      const SizedBox(height: 16),
+                      ..._buildAllSpacesSection(context),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  ..._buildRecentSection(context),
-                  const SizedBox(height: 36),
-                  const SectionHeader(
-                    title: '所有空间',
-                    action: Icon(Icons.more_horiz_rounded),
-                  ),
-                  const SizedBox(height: 16),
-                  ..._buildAllSpacesSection(context),
-                ],
-              ),
-              ),
+                ),
               ),
             ),
           ],
@@ -123,9 +125,7 @@ class _SpacesViewState extends State<SpacesView> {
     }
 
     if (_error != null) {
-      return [
-        _buildErrorCard(context, title: '空间加载失败'),
-      ];
+      return [_buildErrorCard(context, title: '空间加载失败')];
     }
 
     if (_spaces.isEmpty) {

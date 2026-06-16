@@ -7,7 +7,7 @@ import 'package:ottersync/components/Common/work_type_icon.dart';
 import 'package:ottersync/services/pomodoro_service.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
-import 'package:ottersync/viewmodels/work_item_api.dart';
+import 'package:ottersync/services/work_item_service.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
 
 class WorkItemDetailView extends StatefulWidget {
@@ -25,7 +25,7 @@ class WorkItemDetailView extends StatefulWidget {
 }
 
 class _WorkItemDetailViewState extends State<WorkItemDetailView> {
-  final _api = WorkItemApi();
+  final _api = WorkItemService();
   WorkItemResponse? _item;
   CreateWorkItemLookups? _lookups;
   List<Sprint> _sprints = const [];
@@ -114,8 +114,6 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
     );
   }
 
-  /// AppBar 上的「专注计时」按钮：未计时时点开选时长 sheet；
-  /// 正在计时时显示剩余 mm:ss，再点则停止。状态由前台服务驱动。
   Widget _buildFocusAction() {
     final palette = AppThemePalette.of(context);
     return ListenableBuilder(
@@ -145,7 +143,6 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
     );
   }
 
-  /// 弹出底部 sheet 选择专注时长，并启动番茄钟前台服务。
   Future<void> _startFocus() async {
     final item = _item;
     if (item == null) return;
@@ -179,9 +176,9 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
     );
     if (!mounted) return;
     if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('无法启动专注计时，请检查通知权限')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('无法启动专注计时，请检查通知权限')));
     }
   }
 
@@ -222,8 +219,10 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
                 onTap: _editSummary,
                 child: Text(
                   item.summary,
-                  style: theme.textTheme.headlineMedium
-                      ?.copyWith(height: 1.25, fontWeight: FontWeight.w700),
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    height: 1.25,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -236,10 +235,7 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
           spacing: 10,
           runSpacing: 8,
           children: [
-            _StatusPill(
-              status: item.status,
-              onTap: _pickStatus,
-            ),
+            _StatusPill(status: item.status, onTap: _pickStatus),
             _SquareIconChip(
               icon: Icons.flag_rounded,
               tint: const Color(0xFFEF4444),
@@ -294,14 +290,18 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline_rounded,
-                size: 48, color: palette.textSecondary),
+            Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: palette.textSecondary,
+            ),
             const SizedBox(height: 16),
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyLarge
-                  ?.copyWith(color: palette.textSecondary),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: palette.textSecondary,
+              ),
             ),
             const SizedBox(height: 24),
             FilledButton(onPressed: _loadItem, child: const Text('重试')),
@@ -347,8 +347,7 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
   }
 
   Future<void> _editDescription() async {
-    final controller =
-        TextEditingController(text: _item!.description ?? '');
+    final controller = TextEditingController(text: _item!.description ?? '');
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -421,8 +420,9 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
       _patch(status: newStatus);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('状态更新失败：$e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('状态更新失败：$e')));
     }
   }
 
@@ -434,9 +434,13 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
       labelBuilder: (o) => o?.title ?? '未分配',
       iconBuilder: (o) => o == null
           ? const _OptionVisual(
-              icon: Icons.person_outline_rounded, color: Color(0xFF94A3B8))
+              icon: Icons.person_outline_rounded,
+              color: Color(0xFF94A3B8),
+            )
           : const _OptionVisual(
-              icon: Icons.person_rounded, color: Color(0xFF1F5DBD)),
+              icon: Icons.person_rounded,
+              color: Color(0xFF1F5DBD),
+            ),
       current: _item!.assignee,
     );
     if (picked == null && _item!.assignee == null) return;
@@ -457,9 +461,13 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
       labelBuilder: (o) => o?.title ?? '无',
       iconBuilder: (o) => o == null
           ? const _OptionVisual(
-              icon: Icons.groups_outlined, color: Color(0xFF94A3B8))
+              icon: Icons.groups_outlined,
+              color: Color(0xFF94A3B8),
+            )
           : const _OptionVisual(
-              icon: Icons.groups_rounded, color: Color(0xFF8E4BC3)),
+              icon: Icons.groups_rounded,
+              color: Color(0xFF8E4BC3),
+            ),
       current: _item!.team,
     );
     if (picked == null && _item!.team == null) return;
@@ -479,7 +487,9 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
       labelBuilder: (s) => s?.name ?? '无',
       iconBuilder: (s) => s == null
           ? const _OptionVisual(
-              icon: Icons.flag_outlined, color: Color(0xFF94A3B8))
+              icon: Icons.flag_outlined,
+              color: Color(0xFF94A3B8),
+            )
           : _OptionVisual(
               icon: s.status == SprintStatus.active
                   ? Icons.play_arrow_rounded
@@ -491,7 +501,11 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
       current: _sprints.firstWhere(
         (s) => s.id == _item!.sprint?.id,
         orElse: () => const Sprint(
-            id: 0, workspaceId: 0, name: '', status: SprintStatus.planned),
+          id: 0,
+          workspaceId: 0,
+          name: '',
+          status: SprintStatus.planned,
+        ),
       ),
     );
     if (picked == null && _item!.sprint == null) return;
@@ -539,7 +553,9 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
             );
           default:
             return const _OptionVisual(
-              icon: Icons.remove_rounded, color: Color(0xFF94A3B8));
+              icon: Icons.remove_rounded,
+              color: Color(0xFF94A3B8),
+            );
         }
       },
       current: null,
@@ -552,16 +568,22 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
   }
 
   Future<void> _pickParent() async {
-    final options = await _api.listParentItems(workspaceId: _item!.workspace.id);
+    final options = await _api.listParentItems(
+      workspaceId: _item!.workspace.id,
+    );
     final picked = await _pickFromList<LookupOption?>(
       title: '选择父工作项',
       options: <LookupOption?>[null, ...options],
       labelBuilder: (o) => o?.title ?? '无',
       iconBuilder: (o) => o == null
           ? const _OptionVisual(
-              icon: Icons.remove_rounded, color: Color(0xFF94A3B8))
+              icon: Icons.remove_rounded,
+              color: Color(0xFF94A3B8),
+            )
           : const _OptionVisual(
-              icon: Icons.account_tree_rounded, color: Color(0xFF1F5DBD)),
+              icon: Icons.account_tree_rounded,
+              color: Color(0xFF1F5DBD),
+            ),
       current: _item!.parent,
     );
     if (picked == null && _item!.parent == null) return;
@@ -605,8 +627,8 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
                       child: Text(
                         '暂无附件',
                         style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                              color: palette.textSecondary,
-                            ),
+                          color: palette.textSecondary,
+                        ),
                       ),
                     )
                   else
@@ -636,8 +658,7 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
                                 color: palette.danger,
                               ),
                               onPressed: () async {
-                                final removed =
-                                    await _removeAttachment(index);
+                                final removed = await _removeAttachment(index);
                                 if (removed) setSheetState(() {});
                               },
                             ),
@@ -704,8 +725,7 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: mimeTypeController,
-                  decoration:
-                      const InputDecoration(labelText: 'MIME 类型（可选）'),
+                  decoration: const InputDecoration(labelText: 'MIME 类型（可选）'),
                 ),
               ],
             ),
@@ -799,8 +819,10 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
           children: [
             const SheetHeader(title: '更多操作'),
             ListTile(
-              leading: Icon(Icons.subdirectory_arrow_right_rounded,
-                  color: palette.primary),
+              leading: Icon(
+                Icons.subdirectory_arrow_right_rounded,
+                color: palette.primary,
+              ),
               title: const Text('创建子工作项'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -808,8 +830,7 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
               },
             ),
             ListTile(
-              leading:
-                  Icon(Icons.account_tree_rounded, color: palette.primary),
+              leading: Icon(Icons.account_tree_rounded, color: palette.primary),
               title: const Text('分配给父工作项'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -826,10 +847,11 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
               },
             ),
             ListTile(
-              leading:
-                  Icon(Icons.delete_outline_rounded, color: palette.danger),
-              title: Text('删除工作项',
-                  style: TextStyle(color: palette.danger)),
+              leading: Icon(
+                Icons.delete_outline_rounded,
+                color: palette.danger,
+              ),
+              title: Text('删除工作项', style: TextStyle(color: palette.danger)),
               onTap: () {
                 Navigator.pop(ctx);
                 _deleteItem();
@@ -917,8 +939,9 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
   }
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _pickDueDate() async {
@@ -967,21 +990,19 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
           shrinkWrap: true,
           children: [
             SheetHeader(title: title),
-            ...options.map(
-              (o) {
-                final visual = iconBuilder?.call(o);
-                return ListTile(
-                  leading: visual == null
-                      ? null
-                      : Icon(visual.icon, color: visual.color),
-                  title: Text(labelBuilder(o)),
-                  trailing: o == current
-                      ? Icon(Icons.check_rounded, color: palette.primary)
-                      : null,
-                  onTap: () => Navigator.pop(ctx, o),
-                );
-              },
-            ),
+            ...options.map((o) {
+              final visual = iconBuilder?.call(o);
+              return ListTile(
+                leading: visual == null
+                    ? null
+                    : Icon(visual.icon, color: visual.color),
+                title: Text(labelBuilder(o)),
+                trailing: o == current
+                    ? Icon(Icons.check_rounded, color: palette.primary)
+                    : null,
+                onTap: () => Navigator.pop(ctx, o),
+              );
+            }),
             const SizedBox(height: 8),
           ],
         ),
@@ -1000,8 +1021,7 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('更多字段',
-                  style: Theme.of(ctx).textTheme.titleMedium),
+              Text('更多字段', style: Theme.of(ctx).textTheme.titleMedium),
               const SizedBox(height: 14),
               _ReadOnlyRow(label: '项目', value: item.workspace.title),
               if (item.createdAt != null)
@@ -1059,9 +1079,7 @@ class _WorkItemDetailViewState extends State<WorkItemDetailView> {
         parent: parent is _Cleared
             ? null
             : (parent as LookupOption?) ?? _item!.parent,
-        team: team is _Cleared
-            ? null
-            : (team as LookupOption?) ?? _item!.team,
+        team: team is _Cleared ? null : (team as LookupOption?) ?? _item!.team,
         sprint: sprint is _Cleared
             ? null
             : (sprint as LookupOption?) ?? _item!.sprint,
@@ -1123,8 +1141,11 @@ class _StatusPill extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              Icon(Icons.keyboard_arrow_down_rounded,
-                  size: 18, color: colors.foreground),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: colors.foreground,
+              ),
             ],
           ),
         ),
@@ -1206,8 +1227,10 @@ class _AssigneeAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initials =
-        (item.assignee?.title ?? 'MT').characters.take(2).toString().toUpperCase();
+    final initials = (item.assignee?.title ?? 'MT').characters
+        .take(2)
+        .toString()
+        .toUpperCase();
     return CircleAvatar(
       radius: 22,
       backgroundColor: const Color(0xFF2C9C9F),
@@ -1250,9 +1273,12 @@ class _ExpandableSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   if (subtitle.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
@@ -1306,19 +1332,18 @@ class _DetailBlock extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text('详细信息',
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600)),
+                  child: Text(
+                    '详细信息',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 Icon(Icons.expand_more_rounded, color: palette.textSecondary),
               ],
             ),
           ),
-          _EditableRow(
-            label: '事务类型',
-            value: item.workType.title,
-            onTap: null,
-          ),
+          _EditableRow(label: '事务类型', value: item.workType.title, onTap: null),
           _EditableRow(
             label: '经办人',
             value: item.assignee?.title ?? '未分配',
@@ -1331,16 +1356,12 @@ class _DetailBlock extends StatelessWidget {
           ),
           _EditableRow(
             label: '开始日期',
-            value: item.startDate == null
-                ? '未设置'
-                : _fmt(item.startDate!),
+            value: item.startDate == null ? '未设置' : _fmt(item.startDate!),
             onTap: onEditStartDate,
           ),
           _EditableRow(
             label: '截止日期',
-            value: item.dueDate == null
-                ? '未设置'
-                : _fmt(item.dueDate!),
+            value: item.dueDate == null ? '未设置' : _fmt(item.dueDate!),
             onTap: onEditDueDate,
           ),
           _EditableRow(
@@ -1382,20 +1403,19 @@ class _EditableRow extends StatelessWidget {
               width: 90,
               child: Text(
                 label,
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: palette.textSecondary),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: palette.textSecondary,
+                ),
               ),
             ),
             const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                value,
-                style: theme.textTheme.bodyMedium,
-              ),
-            ),
+            Expanded(child: Text(value, style: theme.textTheme.bodyMedium)),
             if (onTap != null)
-              Icon(Icons.chevron_right_rounded,
-                  size: 18, color: palette.textSecondary),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: palette.textSecondary,
+              ),
           ],
         ),
       ),
@@ -1419,14 +1439,15 @@ class _ReadOnlyRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 90,
-            child: Text(label,
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: palette.textSecondary)),
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: palette.textSecondary,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
-          Expanded(
-            child: Text(value, style: theme.textTheme.bodyMedium),
-          ),
+          Expanded(child: Text(value, style: theme.textTheme.bodyMedium)),
         ],
       ),
     );

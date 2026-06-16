@@ -11,19 +11,19 @@ import 'package:ottersync/services/app_event_bus.dart';
 import 'package:ottersync/services/dashboard_stats_service.dart';
 import 'package:ottersync/state/auth_controller.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
-import 'package:ottersync/viewmodels/work_item_api.dart';
+import 'package:ottersync/services/work_item_service.dart';
 
 class DashboardView extends StatefulWidget {
-  const DashboardView({super.key, WorkItemApi? api}) : _api = api;
+  const DashboardView({super.key, WorkItemService? api}) : _api = api;
 
-  final WorkItemApi? _api;
+  final WorkItemService? _api;
 
   @override
   State<DashboardView> createState() => _DashboardViewState();
 }
 
 class _DashboardViewState extends State<DashboardView> {
-  late final WorkItemApi _api;
+  late final WorkItemService _api;
   List<IssueSummary> _issues = const [];
   List<DashboardActivityItem> _activities = const [];
   List<IssueSummary> _allItems = const [];
@@ -36,17 +36,16 @@ class _DashboardViewState extends State<DashboardView> {
   @override
   void initState() {
     super.initState();
-    _api = widget._api ?? WorkItemApi();
+    _api = widget._api ?? WorkItemService();
     _loadDashboardData();
-    // 任意工作项变化都广播过来，仪表盘据此自动重算，无需手动下拉刷新。
-    _eventSub = AppEventBus.instance.on({
-      AppEventType.workItemCreated,
-      AppEventType.workItemUpdated,
-    }, (event) {
-      if (mounted) {
-        _loadDashboardData();
-      }
-    });
+    _eventSub = AppEventBus.instance.on(
+      {AppEventType.workItemCreated, AppEventType.workItemUpdated},
+      (event) {
+        if (mounted) {
+          _loadDashboardData();
+        }
+      },
+    );
   }
 
   @override
@@ -76,9 +75,7 @@ class _DashboardViewState extends State<DashboardView> {
     if (_loading) {
       return ListView(
         padding: const EdgeInsets.symmetric(vertical: 80),
-        children: const [
-          Center(child: CircularProgressIndicator()),
-        ],
+        children: const [Center(child: CircularProgressIndicator())],
       );
     }
     if (_error != null) {
@@ -129,7 +126,6 @@ class _DashboardViewState extends State<DashboardView> {
           activities: _activities,
           userInitials: _userInitials(),
           onActivityTap: (item) {
-            // 活动里嵌入了 work item key，跳转到它的详情页
             final id = _activityWorkItemId(item);
             if (id != null) {
               context.push('/work-item/$id');
@@ -170,8 +166,6 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   int? _activityWorkItemId(DashboardActivityItem item) {
-    // DashboardActivityItem 里没有显式 id，但是 issue (key) 可以反查
-    // 主键无法纯客户端推断；这里就回到所有工作流后续可以扩展。
     final match = _allItems.firstWhere(
       (e) => e.key == item.issue,
       orElse: () => const IssueSummary(title: '', key: ''),
@@ -210,7 +204,6 @@ class _DashboardViewState extends State<DashboardView> {
       if (!mounted) return;
       final issues = results[0] as List<IssueSummary>;
       final allItems = results[2] as List<IssueSummary>;
-      // 在后台 Isolate 线程上聚合统计，避免阻塞 UI。
       final statsResult = await const DashboardStatsService().computeStats(
         assignedCount: issues.length,
         allItems: allItems,
@@ -232,5 +225,4 @@ class _DashboardViewState extends State<DashboardView> {
       });
     }
   }
-
 }

@@ -7,12 +7,11 @@ import 'package:ottersync/services/auth_service.dart';
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
 class AuthController extends ChangeNotifier {
-  AuthController({AuthService? authService})
-      : _authService = authService ?? AuthService() {
+  AuthController(){
     _authSubscription = _authService.authStateChanges().listen(_onAuthChanged);
   }
 
-  final AuthService _authService;
+  final AuthService _authService = AuthService();
   late final StreamSubscription<User?> _authSubscription;
 
   AuthStatus _status = AuthStatus.unknown;

@@ -8,8 +8,6 @@ enum _PickerMode { single, range }
 class DatePickResult {
   const DatePickResult({this.start, this.end});
 
-  /// `start == null && end != null` 表示单日（截止日期为 end）。
-  /// 两者都非空表示时间段。
   final DateTime? start;
   final DateTime? end;
 
@@ -19,8 +17,6 @@ class DatePickResult {
 bool _isSameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
-/// 统一日期/区间选择器（基于 table_calendar），通过底部抽屉弹出。
-/// 用户可以在 sheet 内切换"单日 / 时间段"模式。
 Future<DatePickResult?> showDatePickerSheet(
   BuildContext context, {
   String title = '选择日期',
@@ -75,7 +71,8 @@ class _DatePickerSheetBodyState extends State<_DatePickerSheetBody> {
   @override
   void initState() {
     super.initState();
-    final hasRange = widget.initialStart != null &&
+    final hasRange =
+        widget.initialStart != null &&
         widget.initialEnd != null &&
         !_isSameDay(widget.initialStart!, widget.initialEnd!);
     _mode = hasRange && widget.allowRange
@@ -109,7 +106,9 @@ class _DatePickerSheetBodyState extends State<_DatePickerSheetBody> {
             if (widget.allowRange)
               Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 4),
+                  horizontal: 20,
+                  vertical: 4,
+                ),
                 child: SegmentedButton<_PickerMode>(
                   segments: const [
                     ButtonSegment(
@@ -130,7 +129,8 @@ class _DatePickerSheetBodyState extends State<_DatePickerSheetBody> {
                       _start = null;
                     } else {
                       _start ??= _end;
-                      if (_start != null && _end != null &&
+                      if (_start != null &&
+                          _end != null &&
                           _end!.isBefore(_start!)) {
                         _end = _start;
                       }

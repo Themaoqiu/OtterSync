@@ -7,7 +7,7 @@ import 'package:ottersync/components/Common/IssueListTile.dart';
 import 'package:ottersync/components/Spaces/SpaceCard.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
-import 'package:ottersync/viewmodels/work_item_api.dart';
+import 'package:ottersync/services/work_item_service.dart';
 
 class SearchView extends StatefulWidget {
   const SearchView({super.key, this.scope = 'workItems'});
@@ -19,7 +19,7 @@ class SearchView extends StatefulWidget {
 }
 
 class _SearchViewState extends State<SearchView> {
-  final _api = WorkItemApi();
+  final _api = WorkItemService();
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   Timer? _debounce;
@@ -104,10 +104,7 @@ class _SearchViewState extends State<SearchView> {
         actions: [
           TextButton(
             onPressed: () => context.pop(),
-            child: Text(
-              '取消',
-              style: TextStyle(color: palette.primary),
-            ),
+            child: Text('取消', style: TextStyle(color: palette.primary)),
           ),
         ],
       ),

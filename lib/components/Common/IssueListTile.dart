@@ -207,7 +207,9 @@ class _IssueToggleCheckbox extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             onTap: onToggle == null ? null : () => onToggle!(!done),
             splashColor: (done ? Colors.white : color).withValues(alpha: 0.22),
-            highlightColor: (done ? Colors.white : color).withValues(alpha: 0.1),
+            highlightColor: (done ? Colors.white : color).withValues(
+              alpha: 0.1,
+            ),
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 220),
               transitionBuilder: (child, animation) => ScaleTransition(
@@ -218,8 +220,12 @@ class _IssueToggleCheckbox extends StatelessWidget {
                 child: child,
               ),
               child: done
-                  ? const Icon(Icons.check_rounded,
-                      key: ValueKey(true), color: Colors.white, size: 18)
+                  ? const Icon(
+                      Icons.check_rounded,
+                      key: ValueKey(true),
+                      color: Colors.white,
+                      size: 18,
+                    )
                   : const SizedBox.shrink(key: ValueKey(false)),
             ),
           ),

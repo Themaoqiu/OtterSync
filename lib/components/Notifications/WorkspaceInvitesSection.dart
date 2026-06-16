@@ -35,10 +35,7 @@ class WorkspaceInvitesSection extends StatelessWidget {
             children: [
               Text('待处理邀请', style: theme.textTheme.titleMedium),
               const SizedBox(height: 4),
-              Text(
-                '接受后才会加入对应工作空间。',
-                style: theme.textTheme.bodySmall,
-              ),
+              Text('接受后才会加入对应工作空间。', style: theme.textTheme.bodySmall),
             ],
           ),
         ),

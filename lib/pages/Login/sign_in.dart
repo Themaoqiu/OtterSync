@@ -70,7 +70,9 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -118,9 +120,7 @@ class _SignInPageState extends State<SignInPage> {
         Row(
           children: [
             Expanded(
-              child: Divider(
-                color: Colors.white.withValues(alpha: 0.3),
-              ),
+              child: Divider(color: Colors.white.withValues(alpha: 0.3)),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -133,9 +133,7 @@ class _SignInPageState extends State<SignInPage> {
               ),
             ),
             Expanded(
-              child: Divider(
-                color: Colors.white.withValues(alpha: 0.3),
-              ),
+              child: Divider(color: Colors.white.withValues(alpha: 0.3)),
             ),
           ],
         ),

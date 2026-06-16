@@ -85,8 +85,8 @@ class HeaderIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppThemePalette.of(context);
-    final iconColor = color ??
-        (emphasized ? palette.primary : palette.textSecondary);
+    final iconColor =
+        color ?? (emphasized ? palette.primary : palette.textSecondary);
     return IconButton(
       onPressed: onPressed,
       tooltip: tooltip,

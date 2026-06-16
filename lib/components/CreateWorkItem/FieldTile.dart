@@ -63,7 +63,9 @@ class FieldTile extends StatelessWidget {
                   Text(
                     value,
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: isPlaceholder ? palette.textTertiary : palette.textPrimary,
+                      color: isPlaceholder
+                          ? palette.textTertiary
+                          : palette.textPrimary,
                     ),
                   ),
                   if (helper != null && helper!.isNotEmpty) ...[

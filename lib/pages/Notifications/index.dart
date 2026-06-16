@@ -6,20 +6,20 @@ import 'package:ottersync/components/Common/PageHeader.dart';
 import 'package:ottersync/components/Notifications/NotificationListTile.dart';
 import 'package:ottersync/components/Notifications/WorkspaceInvitesSection.dart';
 import 'package:ottersync/viewmodels/jira_models.dart';
-import 'package:ottersync/viewmodels/work_item_api.dart';
+import 'package:ottersync/services/work_item_service.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
 
 class NotificationsView extends StatefulWidget {
-  const NotificationsView({super.key, WorkItemApi? api}) : _api = api;
+  const NotificationsView({super.key, WorkItemService? api}) : _api = api;
 
-  final WorkItemApi? _api;
+  final WorkItemService? _api;
 
   @override
   State<NotificationsView> createState() => _NotificationsViewState();
 }
 
 class _NotificationsViewState extends State<NotificationsView> {
-  late final WorkItemApi _api;
+  late final WorkItemService _api;
   late final Stream<List<NotificationItem>> _notificationStream;
   List<WorkspaceInvite> _invites = const [];
   bool _loadingInvites = true;
@@ -28,7 +28,7 @@ class _NotificationsViewState extends State<NotificationsView> {
   @override
   void initState() {
     super.initState();
-    _api = widget._api ?? WorkItemApi();
+    _api = widget._api ?? WorkItemService();
     _notificationStream = _api.watchNotifications();
     _loadInvites();
   }
@@ -45,57 +45,61 @@ class _NotificationsViewState extends State<NotificationsView> {
             child: StreamBuilder<List<NotificationItem>>(
               stream: _notificationStream,
               builder: (context, snapshot) {
-                final notifications = snapshot.data ?? const <NotificationItem>[];
+                final notifications =
+                    snapshot.data ?? const <NotificationItem>[];
                 final waiting =
                     snapshot.connectionState == ConnectionState.waiting;
 
                 return RefreshIndicator(
                   onRefresh: _loadInvites,
                   child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    if (snapshot.hasError)
-                      AppSurface(
-                        child: Text('${snapshot.error}',
-                            style: theme.textTheme.bodyMedium),
-                      )
-                    else if (waiting && _loadingInvites)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 40),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (notifications.isEmpty && _invites.isEmpty)
-                      const SizedBox(
-                        height: 560,
-                        child: EmptyStateView(
-                          icon: Icons.notifications_none_rounded,
-                          title: '还没有通知',
-                          description: '任务活动和工作空间邀请会显示在这里。',
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      if (snapshot.hasError)
+                        AppSurface(
+                          child: Text(
+                            '${snapshot.error}',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        )
+                      else if (waiting && _loadingInvites)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 40),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (notifications.isEmpty && _invites.isEmpty)
+                        const SizedBox(
+                          height: 560,
+                          child: EmptyStateView(
+                            icon: Icons.notifications_none_rounded,
+                            title: '还没有通知',
+                            description: '任务活动和工作空间邀请会显示在这里。',
+                          ),
+                        )
+                      else ...[
+                        WorkspaceInvitesSection(
+                          invites: _invites,
+                          processingInviteId: _processingInviteId,
+                          onAccept: _acceptInvite,
+                          onDecline: _declineInvite,
                         ),
-                      )
-                    else ...[
-                      WorkspaceInvitesSection(
-                        invites: _invites,
-                        processingInviteId: _processingInviteId,
-                        onAccept: _acceptInvite,
-                        onDecline: _declineInvite,
-                      ),
-                      ...notifications.map(
-                        (item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: NotificationListTile(
-                            item: item,
-                            onTap: item.workItemId == null
-                                ? null
-                                : () =>
-                                    context.push('/work-item/${item.workItemId}'),
+                        ...notifications.map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: NotificationListTile(
+                              item: item,
+                              onTap: item.workItemId == null
+                                  ? null
+                                  : () => context.push(
+                                      '/work-item/${item.workItemId}',
+                                    ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
-                ),
+                  ),
                 );
               },
             ),
@@ -136,9 +140,9 @@ class _NotificationsViewState extends State<NotificationsView> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _processingInviteId = null);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
     }
   }
 
@@ -154,9 +158,9 @@ class _NotificationsViewState extends State<NotificationsView> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _processingInviteId = null);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
     }
   }
 }

@@ -59,8 +59,7 @@ class _BacklogTabViewState extends State<BacklogTabView> {
                   _composingGroup = group.title;
                   _expandedGroups.add(group.title);
                 }),
-                onCancelCompose: () =>
-                    setState(() => _composingGroup = null),
+                onCancelCompose: () => setState(() => _composingGroup = null),
                 onSubmitCompose: (summary) async {
                   setState(() => _composingGroup = null);
                   if (summary.trim().isEmpty) return;
@@ -193,20 +192,20 @@ class _BacklogGroupCard extends StatelessWidget {
                       else
                         InkWell(
                           onTap: onStartCompose,
-                          borderRadius:
-                              BorderRadius.circular(AppSpace.radius),
+                          borderRadius: BorderRadius.circular(AppSpace.radius),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             child: Row(
                               children: [
-                                Icon(Icons.add_rounded,
-                                    color: palette.primary, size: 22),
+                                Icon(
+                                  Icons.add_rounded,
+                                  color: palette.primary,
+                                  size: 22,
+                                ),
                                 const SizedBox(width: 10),
                                 Text(
                                   '创建工作项',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyLarge
+                                  style: Theme.of(context).textTheme.bodyLarge
                                       ?.copyWith(color: palette.primary),
                                 ),
                               ],
@@ -269,8 +268,11 @@ class _BacklogItemRow extends StatelessWidget {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: done
-                        ? const Icon(Icons.check_rounded,
-                            color: Colors.white, size: 16)
+                        ? const Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          )
                         : null,
                   ),
                 ),
@@ -297,10 +299,7 @@ class _BacklogItemRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            UserAvatar(
-              label: item.assigneeInitials ?? 'MT',
-              size: 26,
-            ),
+            UserAvatar(label: item.assigneeInitials ?? 'MT', size: 26),
             Icon(Icons.chevron_right_rounded, color: palette.textSecondary),
           ],
         ),
@@ -310,10 +309,7 @@ class _BacklogItemRow extends StatelessWidget {
 }
 
 class _InlineComposeRow extends StatefulWidget {
-  const _InlineComposeRow({
-    required this.onSubmit,
-    required this.onCancel,
-  });
+  const _InlineComposeRow({required this.onSubmit, required this.onCancel});
 
   final ValueChanged<String> onSubmit;
   final VoidCallback onCancel;
@@ -418,10 +414,9 @@ class _CountBadge extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         text,
-        style: Theme.of(context)
-            .textTheme
-            .bodySmall
-            ?.copyWith(color: fg, fontWeight: FontWeight.w600),
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: fg, fontWeight: FontWeight.w600),
       ),
     );
   }

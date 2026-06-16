@@ -19,7 +19,7 @@ class BoardTabView extends StatelessWidget {
   final VoidCallback onOpenSprintManager;
   final void Function(IssueSummary item) onItemTap;
   final void Function(IssueSummary item, WorkItemStatus status)
-      onItemStatusChanged;
+  onItemStatusChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +95,7 @@ class _SprintBoard extends StatelessWidget {
   final List<IssueSummary> items;
   final void Function(IssueSummary item) onItemTap;
   final void Function(IssueSummary item, WorkItemStatus status)
-      onItemStatusChanged;
+  onItemStatusChanged;
   final VoidCallback onManage;
 
   @override
@@ -127,14 +127,13 @@ class _SprintBoard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  sprint.name,
-                  style: theme.textTheme.titleMedium,
-                ),
+                child: Text(sprint.name, style: theme.textTheme.titleMedium),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(999),
@@ -224,7 +223,7 @@ class _BoardColumn extends StatelessWidget {
   final List<IssueSummary> items;
   final void Function(IssueSummary item) onItemTap;
   final void Function(IssueSummary item, WorkItemStatus status)
-      onItemStatusChanged;
+  onItemStatusChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -266,10 +265,7 @@ class _BoardColumn extends StatelessWidget {
           if (items.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              child: Text(
-                '没有工作项',
-                style: theme.textTheme.bodySmall,
-              ),
+              child: Text('没有工作项', style: theme.textTheme.bodySmall),
             )
           else
             ...items.map(
@@ -372,8 +368,11 @@ class _StatusMenu extends StatelessWidget {
     final palette = AppThemePalette.of(context);
     return PopupMenuButton<WorkItemStatus>(
       tooltip: '更改状态',
-      icon: Icon(Icons.more_horiz_rounded,
-          size: 18, color: palette.textSecondary),
+      icon: Icon(
+        Icons.more_horiz_rounded,
+        size: 18,
+        color: palette.textSecondary,
+      ),
       padding: EdgeInsets.zero,
       onSelected: onSelected,
       itemBuilder: (ctx) => WorkItemStatus.values

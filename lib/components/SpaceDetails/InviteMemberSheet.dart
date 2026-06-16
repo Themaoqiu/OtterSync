@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ottersync/components/Common/SheetHeader.dart';
 import 'package:ottersync/components/Common/UserAvatar.dart';
 import 'package:ottersync/theme/design_tokens.dart';
-import 'package:ottersync/viewmodels/work_item_api.dart';
+import 'package:ottersync/services/work_item_service.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
 
 class InviteMemberSheet extends StatefulWidget {
@@ -12,7 +12,7 @@ class InviteMemberSheet extends StatefulWidget {
     required this.workspaceId,
   });
 
-  final WorkItemApi api;
+  final WorkItemService api;
   final int workspaceId;
 
   @override
@@ -64,9 +64,11 @@ class _InviteMemberSheetState extends State<InviteMemberSheet> {
     final query = _controller.text.trim().toLowerCase();
     if (query.isEmpty) return _users;
     return _users
-        .where((user) =>
-            user.title.toLowerCase().contains(query) ||
-            (user.subtitle?.toLowerCase().contains(query) ?? false))
+        .where(
+          (user) =>
+              user.title.toLowerCase().contains(query) ||
+              (user.subtitle?.toLowerCase().contains(query) ?? false),
+        )
         .toList(growable: false);
   }
 
@@ -84,9 +86,9 @@ class _InviteMemberSheetState extends State<InviteMemberSheet> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _inviting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('邀请失败：$error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('邀请失败：$error')));
     }
   }
 
@@ -135,14 +137,19 @@ class _InviteMemberSheetState extends State<InviteMemberSheet> {
                         padding: EdgeInsets.zero,
                         children: [
                           if (typed.isNotEmpty &&
-                              !filtered.any((u) =>
-                                  _emailOf(u).toLowerCase() ==
-                                  typed.toLowerCase()))
+                              !filtered.any(
+                                (u) =>
+                                    _emailOf(u).toLowerCase() ==
+                                    typed.toLowerCase(),
+                              ))
                             ListTile(
                               leading: CircleAvatar(
                                 backgroundColor: palette.primarySoft,
-                                child: Icon(Icons.send_rounded,
-                                    color: palette.primary, size: 20),
+                                child: Icon(
+                                  Icons.send_rounded,
+                                  color: palette.primary,
+                                  size: 20,
+                                ),
                               ),
                               title: Text('邀请 “$typed”'),
                               subtitle: const Text('通过邮箱邀请'),
@@ -150,16 +157,15 @@ class _InviteMemberSheetState extends State<InviteMemberSheet> {
                             ),
                           ...filtered.map(
                             (user) => ListTile(
-                              leading: UserAvatar(
-                                label: user.title,
-                                size: 36,
-                              ),
+                              leading: UserAvatar(label: user.title, size: 36),
                               title: Text(user.title),
                               subtitle: user.subtitle == null
                                   ? null
                                   : Text(user.subtitle!),
-                              trailing: Icon(Icons.person_add_alt_1_rounded,
-                                  color: palette.primary),
+                              trailing: Icon(
+                                Icons.person_add_alt_1_rounded,
+                                color: palette.primary,
+                              ),
                               onTap: () => _invite(_emailOf(user)),
                             ),
                           ),

@@ -36,9 +36,9 @@ class AccountView extends StatelessWidget {
       await AuthScope.of(context).signOut();
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('退出失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('退出失败：$e')));
     }
   }
 
@@ -70,12 +70,14 @@ class AccountView extends StatelessWidget {
     try {
       await AuthScope.of(context).updateDisplayName(result);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('已更新显示名')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已更新显示名')));
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('更新失败：$e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('更新失败：$e')));
     }
   }
 
@@ -136,10 +138,7 @@ class AccountView extends StatelessWidget {
           const SizedBox(height: 8),
           AccountActionList(
             items: const [
-              AccountActionItem(
-                title: '设置',
-                icon: Icons.settings_outlined,
-              ),
+              AccountActionItem(title: '设置', icon: Icons.settings_outlined),
             ],
             onTap: (item) => context.push('/settings'),
           ),
@@ -148,14 +147,12 @@ class AccountView extends StatelessWidget {
           const SizedBox(height: 8),
           AccountActionList(
             items: const [
-              AccountActionItem(
-                title: '版本',
-                icon: Icons.info_outline_rounded,
-              ),
+              AccountActionItem(title: '版本', icon: Icons.info_outline_rounded),
             ],
             onTap: (item) {
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(const SnackBar(content: Text('OtterSync 1.0.0')));
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('OtterSync 1.0.0')));
             },
           ),
           const SizedBox(height: 48),
@@ -186,10 +183,10 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: palette.textSecondary,
-              letterSpacing: 0.6,
-              fontWeight: FontWeight.w600,
-            ),
+          color: palette.textSecondary,
+          letterSpacing: 0.6,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

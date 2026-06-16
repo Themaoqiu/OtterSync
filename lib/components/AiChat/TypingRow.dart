@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:ottersync/components/AiChat/AssistantAvatar.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 
-/// 正在输入：三个跳跃圆点 + AI 头像。
 class TypingRow extends StatefulWidget {
   const TypingRow({super.key});
 

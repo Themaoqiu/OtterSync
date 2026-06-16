@@ -29,13 +29,12 @@ class AssignedIssuesCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text('分配给我', style: theme.textTheme.titleMedium),
-              ),
+              Expanded(child: Text('分配给我', style: theme.textTheme.titleMedium)),
               Text(
                 '${issues.length} 项',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: palette.textSecondary),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: palette.textSecondary,
+                ),
               ),
             ],
           ),
@@ -46,65 +45,63 @@ class AssignedIssuesCard extends StatelessWidget {
               child: Center(
                 child: Text(
                   '当前没有分配给你的工作项',
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(color: palette.textSecondary),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
+                  ),
                 ),
               ),
             )
           else
             ...issues.asMap().entries.map(
-                  (entry) => Column(
-                    children: [
-                      InkWell(
-                        onTap: () => onIssueTap(entry.value),
-                        borderRadius: BorderRadius.circular(AppSpace.radius),
-                        child: Padding(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 10),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              WorkTypeIconBadge(
-                                title: entry.value.workTypeTitle,
-                                size: 30,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      entry.value.title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: theme.textTheme.bodyLarge,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${entry.value.key} · ${entry.value.status ?? '待办'}',
-                                      style: theme.textTheme.bodySmall,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(Icons.chevron_right_rounded,
-                                  color: palette.textSecondary, size: 20),
-                            ],
+              (entry) => Column(
+                children: [
+                  InkWell(
+                    onTap: () => onIssueTap(entry.value),
+                    borderRadius: BorderRadius.circular(AppSpace.radius),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          WorkTypeIconBadge(
+                            title: entry.value.workTypeTitle,
+                            size: 30,
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  entry.value.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyLarge,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${entry.value.key} · ${entry.value.status ?? '待办'}',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: palette.textSecondary,
+                            size: 20,
+                          ),
+                        ],
                       ),
-                      if (entry.key != issues.length - 1)
-                        Divider(
-                            height: 1, color: palette.divider, indent: 42),
-                    ],
+                    ),
                   ),
-                ),
+                  if (entry.key != issues.length - 1)
+                    Divider(height: 1, color: palette.divider, indent: 42),
+                ],
+              ),
+            ),
           const SizedBox(height: 8),
-          _RefreshFooter(
-            label: lastSyncedLabel,
-            onTap: onRefresh,
-          ),
+          _RefreshFooter(label: lastSyncedLabel, onTap: onRefresh),
         ],
       ),
     );
@@ -164,21 +161,24 @@ class _RefreshFooterState extends State<_RefreshFooter>
         onTap: _handle,
         borderRadius: BorderRadius.circular(999),
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               RotationTransition(
                 turns: _ctl,
-                child: Icon(Icons.sync_rounded,
-                    color: palette.primary, size: 18),
+                child: Icon(
+                  Icons.sync_rounded,
+                  color: palette.primary,
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 6),
               Text(
                 _busy ? '正在刷新…' : widget.label,
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: palette.primary),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: palette.primary,
+                ),
               ),
             ],
           ),

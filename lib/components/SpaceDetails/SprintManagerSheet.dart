@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ottersync/theme/design_tokens.dart';
-import 'package:ottersync/viewmodels/work_item_api.dart';
+import 'package:ottersync/services/work_item_service.dart';
 import 'package:ottersync/viewmodels/work_item_models.dart';
 
 class SprintManagerSheet extends StatefulWidget {
@@ -11,7 +11,7 @@ class SprintManagerSheet extends StatefulWidget {
     required this.onChanged,
   });
 
-  final WorkItemApi api;
+  final WorkItemService api;
   final int workspaceId;
   final VoidCallback onChanged;
 
@@ -36,7 +36,9 @@ class _SprintManagerSheetState extends State<SprintManagerSheet> {
       _error = null;
     });
     try {
-      final list = await widget.api.listSprints(workspaceId: widget.workspaceId);
+      final list = await widget.api.listSprints(
+        workspaceId: widget.workspaceId,
+      );
       if (!mounted) return;
       setState(() {
         _sprints = list;
@@ -93,7 +95,9 @@ class _SprintManagerSheetState extends State<SprintManagerSheet> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -133,23 +137,21 @@ class _SprintManagerSheetState extends State<SprintManagerSheet> {
                 child: _loading
                     ? const Center(child: CircularProgressIndicator())
                     : _error != null
-                        ? Center(
-                            child: Text(_error!,
-                                style: theme.textTheme.bodyMedium),
-                          )
-                        : _sprints.isEmpty
-                            ? _EmptyHint(palette: palette)
-                            : ListView.separated(
-                                controller: scrollController,
-                                itemCount: _sprints.length,
-                                separatorBuilder: (a, b) =>
-                                    const SizedBox(height: 12),
-                                itemBuilder: (context, index) => _SprintCard(
-                                  sprint: _sprints[index],
-                                  onUpdateStatus: _updateStatus,
-                                  onDelete: _delete,
-                                ),
-                              ),
+                    ? Center(
+                        child: Text(_error!, style: theme.textTheme.bodyMedium),
+                      )
+                    : _sprints.isEmpty
+                    ? _EmptyHint(palette: palette)
+                    : ListView.separated(
+                        controller: scrollController,
+                        itemCount: _sprints.length,
+                        separatorBuilder: (a, b) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) => _SprintCard(
+                          sprint: _sprints[index],
+                          onUpdateStatus: _updateStatus,
+                          onDelete: _delete,
+                        ),
+                      ),
               ),
             ],
           ),
@@ -300,14 +302,13 @@ class _SprintCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  sprint.name,
-                  style: theme.textTheme.titleMedium,
-                ),
+                child: Text(sprint.name, style: theme.textTheme.titleMedium),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(999),
@@ -329,8 +330,11 @@ class _SprintCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              Icon(Icons.calendar_today_rounded,
-                  size: 14, color: palette.textTertiary),
+              Icon(
+                Icons.calendar_today_rounded,
+                size: 14,
+                color: palette.textTertiary,
+              ),
               const SizedBox(width: 6),
               Text(
                 _dateRangeLabel(sprint.startDate, sprint.endDate),
@@ -352,7 +356,10 @@ class _SprintCard extends StatelessWidget {
                 TextButton.icon(
                   onPressed: () =>
                       onUpdateStatus(sprint.id, SprintStatus.completed),
-                  icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+                  icon: const Icon(
+                    Icons.check_circle_outline_rounded,
+                    size: 18,
+                  ),
                   label: const Text('结束冲刺'),
                 ),
               const Spacer(),
@@ -449,8 +456,11 @@ class _DateRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_outlined,
-                size: 18, color: palette.textSecondary),
+            Icon(
+              Icons.calendar_today_outlined,
+              size: 18,
+              color: palette.textSecondary,
+            ),
             const SizedBox(width: 10),
             Text(label, style: theme.textTheme.bodyMedium),
             const Spacer(),

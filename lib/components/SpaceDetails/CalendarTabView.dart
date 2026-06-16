@@ -19,12 +19,12 @@ class CalendarTabView extends StatefulWidget {
 
   final List<IssueSummary> items;
   final void Function(IssueSummary item) onItemTap;
-  // dueDate=null 表示清除安排
   final Future<void> Function(
     IssueSummary item,
     DateTime? startDate,
     DateTime? dueDate,
-  ) onScheduleItem;
+  )
+  onScheduleItem;
 
   @override
   State<CalendarTabView> createState() => _CalendarTabViewState();
@@ -63,7 +63,9 @@ class _CalendarTabViewState extends State<CalendarTabView> {
               const SizedBox(width: 8),
               _filterChip(
                 _CalendarFilterKind.status,
-                _statusFilter == null ? '状态' : workItemStatusLabel(_statusFilter!),
+                _statusFilter == null
+                    ? '状态'
+                    : workItemStatusLabel(_statusFilter!),
                 _statusFilter != null,
               ),
               const SizedBox(width: 8),
@@ -165,7 +167,6 @@ class _CalendarTabViewState extends State<CalendarTabView> {
   Future<void> _scheduleTo(IssueSummary item) async {
     final hasExisting = item.startDate != null || item.dueDate != null;
     if (hasExisting) {
-      // 已安排：先弹一个小 sheet 让用户选择"修改 / 清除"
       final palette = AppThemePalette.of(context);
       final action = await showModalBottomSheet<String>(
         context: context,
@@ -176,14 +177,15 @@ class _CalendarTabViewState extends State<CalendarTabView> {
             children: [
               const SheetHeader(title: '安排时间'),
               ListTile(
-                leading: Icon(Icons.edit_calendar_rounded,
-                    color: palette.primary),
+                leading: Icon(
+                  Icons.edit_calendar_rounded,
+                  color: palette.primary,
+                ),
                 title: const Text('修改时间'),
                 onTap: () => Navigator.pop(ctx, 'edit'),
               ),
               ListTile(
-                leading: Icon(Icons.event_busy_rounded,
-                    color: palette.danger),
+                leading: Icon(Icons.event_busy_rounded, color: palette.danger),
                 title: const Text('清除安排'),
                 onTap: () => Navigator.pop(ctx, 'clear'),
               ),
@@ -220,9 +222,7 @@ class _CalendarTabViewState extends State<CalendarTabView> {
         decoration: BoxDecoration(
           color: active ? palette.primarySoft : palette.surface,
           borderRadius: BorderRadius.circular(AppSpace.radius),
-          border: Border.all(
-            color: active ? palette.primary : palette.border,
-          ),
+          border: Border.all(color: active ? palette.primary : palette.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -257,8 +257,10 @@ class _CalendarTabViewState extends State<CalendarTabView> {
           children: [
             SheetHeader(title: _filterTitle(kind)),
             ListTile(
-              leading: const Icon(Icons.all_inclusive_rounded,
-                  color: Color(0xFF44546F)),
+              leading: const Icon(
+                Icons.all_inclusive_rounded,
+                color: Color(0xFF44546F),
+              ),
               title: const Text('全部'),
               onTap: () => Navigator.pop(ctx, ''),
             ),
@@ -304,34 +306,47 @@ class _CalendarTabViewState extends State<CalendarTabView> {
         return WorkTypeIconBadge(title: value, size: 24);
       case _CalendarFilterKind.status:
         if (value == workItemStatusLabel(WorkItemStatus.done)) {
-          return const Icon(Icons.check_circle_rounded,
-              color: Color(0xFF1F8B4C));
+          return const Icon(
+            Icons.check_circle_rounded,
+            color: Color(0xFF1F8B4C),
+          );
         }
         if (value == workItemStatusLabel(WorkItemStatus.inProgress)) {
-          return const Icon(Icons.timelapse_rounded,
-              color: Color(0xFF1F5DBD));
+          return const Icon(Icons.timelapse_rounded, color: Color(0xFF1F5DBD));
         }
-        return const Icon(Icons.radio_button_unchecked_rounded,
-            color: Color(0xFF44546F));
+        return const Icon(
+          Icons.radio_button_unchecked_rounded,
+          color: Color(0xFF44546F),
+        );
       case _CalendarFilterKind.assignee:
         return const Icon(Icons.person_rounded, color: Color(0xFF1F5DBD));
       case _CalendarFilterKind.priority:
         switch (value) {
           case 'Highest':
-            return const Icon(Icons.keyboard_double_arrow_up_rounded,
-                color: Color(0xFFE5493A));
+            return const Icon(
+              Icons.keyboard_double_arrow_up_rounded,
+              color: Color(0xFFE5493A),
+            );
           case 'High':
-            return const Icon(Icons.keyboard_arrow_up_rounded,
-                color: Color(0xFFFF8B6B));
+            return const Icon(
+              Icons.keyboard_arrow_up_rounded,
+              color: Color(0xFFFF8B6B),
+            );
           case 'Medium':
-            return const Icon(Icons.drag_handle_rounded,
-                color: Color(0xFFFF8B00));
+            return const Icon(
+              Icons.drag_handle_rounded,
+              color: Color(0xFFFF8B00),
+            );
           case 'Low':
-            return const Icon(Icons.keyboard_arrow_down_rounded,
-                color: Color(0xFF6CA6FF));
+            return const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFF6CA6FF),
+            );
           case 'Lowest':
-            return const Icon(Icons.keyboard_double_arrow_down_rounded,
-                color: Color(0xFF4C84FF));
+            return const Icon(
+              Icons.keyboard_double_arrow_down_rounded,
+              color: Color(0xFF4C84FF),
+            );
         }
         return const Icon(Icons.flag_rounded, color: Color(0xFF44546F));
     }
@@ -353,12 +368,13 @@ class _CalendarTabViewState extends State<CalendarTabView> {
   List<String> _filterOptions(_CalendarFilterKind kind) {
     switch (kind) {
       case _CalendarFilterKind.workType:
-        final set = widget.items
-            .map((i) => i.workTypeTitle)
-            .whereType<String>()
-            .toSet()
-            .toList()
-          ..sort();
+        final set =
+            widget.items
+                .map((i) => i.workTypeTitle)
+                .whereType<String>()
+                .toSet()
+                .toList()
+              ..sort();
         return set.isEmpty ? const ['任务', '缺陷', '故事'] : set;
       case _CalendarFilterKind.status:
         return WorkItemStatus.values.map(workItemStatusLabel).toList();
@@ -395,18 +411,20 @@ class _CalendarTabViewState extends State<CalendarTabView> {
       _selectedDay.month,
       _selectedDay.day,
     );
-    return _filteredItems.where((item) {
-      final start = item.startDate;
-      final due = item.dueDate;
-      if (start == null && due == null) return false;
-      final from = start == null
-          ? DateTime(due!.year, due.month, due.day)
-          : DateTime(start.year, start.month, start.day);
-      final to = due == null
-          ? DateTime(start!.year, start.month, start.day)
-          : DateTime(due.year, due.month, due.day);
-      return !target.isBefore(from) && !target.isAfter(to);
-    }).toList(growable: false);
+    return _filteredItems
+        .where((item) {
+          final start = item.startDate;
+          final due = item.dueDate;
+          if (start == null && due == null) return false;
+          final from = start == null
+              ? DateTime(due!.year, due.month, due.day)
+              : DateTime(start.year, start.month, start.day);
+          final to = due == null
+              ? DateTime(start!.year, start.month, start.day)
+              : DateTime(due.year, due.month, due.day);
+          return !target.isBefore(from) && !target.isAfter(to);
+        })
+        .toList(growable: false);
   }
 
   List<IssueSummary> get _unscheduledItems {
@@ -467,8 +485,11 @@ class _ScheduledItemRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded,
-                color: palette.textSecondary, size: 20),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: palette.textSecondary,
+              size: 20,
+            ),
           ],
         ),
       ),
@@ -507,13 +528,13 @@ class _ScheduleBadge extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.add_rounded,
-                  size: 14, color: palette.textSecondary),
+              Icon(Icons.add_rounded, size: 14, color: palette.textSecondary),
               const SizedBox(width: 4),
               Text(
                 '安排时间',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: palette.textSecondary),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: palette.textSecondary,
+                ),
               ),
             ],
           ),
@@ -521,9 +542,7 @@ class _ScheduleBadge extends StatelessWidget {
       );
     }
 
-    final color = hasRange
-        ? const Color(0xFF8E4BC3)
-        : const Color(0xFF1F5DBD);
+    final color = hasRange ? const Color(0xFF8E4BC3) : const Color(0xFF1F5DBD);
     final icon = hasRange ? Icons.date_range_rounded : Icons.event_rounded;
     final label = hasRange
         ? '${_fmt(startDate!)} ~ ${_fmt(dueDate!)}'

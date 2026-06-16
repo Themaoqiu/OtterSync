@@ -14,30 +14,18 @@ class AuthServiceException implements Exception {
 }
 
 class AuthService {
-  AuthService({
-    FirebaseAuth? auth,
-    FirebaseFirestore? firestore,
-    GoogleSignIn? googleSignIn,
-  })  : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
-
-  final FirebaseAuth _auth;
-  final FirebaseFirestore _firestore;
-  final GoogleSignIn _googleSignIn;
-
   static const _usersCollection = 'users';
 
-  User? get currentUser => _auth.currentUser;
+  User? get currentUser => FirebaseAuth.instance.currentUser;
 
-  Stream<User?> authStateChanges() => _auth.authStateChanges();
+  Stream<User?> authStateChanges() => FirebaseAuth.instance.authStateChanges();
 
   Future<User> signIn(String account, String password) async {
     return _guard(() async {
       final email = account.contains('@')
           ? account
           : await _resolveEmailByUsername(account);
-      final credential = await _auth.signInWithEmailAndPassword(
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -45,31 +33,28 @@ class AuthService {
     });
   }
 
-  Future<User> register(
-    String username,
-    String email,
-    String password,
-  ) async {
+  Future<User> register(String username, String email, String password) async {
     return _guard(() async {
-      final credential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
       final user = credential.user!;
       await user.updateDisplayName(username);
-      await _firestore.collection(_usersCollection).doc(user.uid).set({
-        'uid': user.uid,
-        'username': username,
-        'email': email.trim().toLowerCase(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      await FirebaseFirestore.instance
+          .collection(_usersCollection)
+          .doc(user.uid)
+          .set({
+            'uid': user.uid,
+            'username': username,
+            'email': email.trim().toLowerCase(),
+            'createdAt': FieldValue.serverTimestamp(),
+          });
       return user;
     });
   }
 
   Future<User> signInWithGoogle() async {
     return _guard(() async {
-      final googleUser = await _googleSignIn.signIn();
+      final googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) {
         throw AuthServiceException('已取消 Google 登录');
       }
@@ -78,7 +63,9 @@ class AuthService {
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      final userCredential = await _auth.signInWithCredential(credential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
       await _ensureUserRecord(userCredential.user!);
       return userCredential.user!;
     });
@@ -96,12 +83,15 @@ class AuthService {
         idToken: credential.identityToken,
         accessToken: credential.authorizationCode,
       );
-      final userCredential = await _auth.signInWithCredential(oauthCredential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        oauthCredential,
+      );
       final user = userCredential.user!;
 
-      final displayName = credential.givenName != null ||
-              credential.familyName != null
-          ? '${credential.givenName ?? ''} ${credential.familyName ?? ''}'.trim()
+      final displayName =
+          credential.givenName != null || credential.familyName != null
+          ? '${credential.givenName ?? ''} ${credential.familyName ?? ''}'
+                .trim()
           : null;
 
       if (displayName != null && displayName.isNotEmpty) {
@@ -114,12 +104,12 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
-    await _auth.signOut();
+    await GoogleSignIn().signOut();
+    await FirebaseAuth.instance.signOut();
   }
 
   Future<String> _resolveEmailByUsername(String username) async {
-    final snapshot = await _firestore
+    final snapshot = await FirebaseFirestore.instance
         .collection(_usersCollection)
         .where('username', isEqualTo: username)
         .limit(1)
@@ -133,14 +123,20 @@ class AuthService {
   }
 
   Future<void> _ensureUserRecord(User user) async {
-    final doc = await _firestore.collection(_usersCollection).doc(user.uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection(_usersCollection)
+        .doc(user.uid)
+        .get();
     if (!doc.exists) {
-      await _firestore.collection(_usersCollection).doc(user.uid).set({
-        'uid': user.uid,
-        'username': user.displayName ?? user.email?.split('@').first ?? '',
-        'email': user.email?.trim().toLowerCase() ?? '',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      await FirebaseFirestore.instance
+          .collection(_usersCollection)
+          .doc(user.uid)
+          .set({
+            'uid': user.uid,
+            'username': user.displayName ?? user.email?.split('@').first ?? '',
+            'email': user.email?.trim().toLowerCase() ?? '',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
     }
   }
 
@@ -154,9 +150,7 @@ class AuthService {
     } on FirebaseException catch (error, stackTrace) {
       debugPrint('AuthService FirebaseException: $error');
       debugPrintStack(stackTrace: stackTrace);
-      throw AuthServiceException(
-        error.message ?? '操作失败，请稍后重试。',
-      );
+      throw AuthServiceException(error.message ?? '操作失败，请稍后重试。');
     }
   }
 

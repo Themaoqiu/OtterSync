@@ -45,7 +45,6 @@ WorkTypeVisual workTypeVisual(String? title) {
       color: Color(0xFF14B8A6),
     );
   }
-  // 默认：任务 / Task
   return const WorkTypeVisual(
     icon: Icons.check_box_rounded,
     color: Color(0xFF1F5DBD),
@@ -53,11 +52,7 @@ WorkTypeVisual workTypeVisual(String? title) {
 }
 
 class WorkTypeIconBadge extends StatelessWidget {
-  const WorkTypeIconBadge({
-    super.key,
-    required this.title,
-    this.size = 26,
-  });
+  const WorkTypeIconBadge({super.key, required this.title, this.size = 26});
 
   final String? title;
   final double size;

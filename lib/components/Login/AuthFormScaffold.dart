@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 const authBgColor = Color(0xFF1F5DBD);
 const authNavyText = Color(0xFF143C82);
 
-/// 登录 / 注册页统一的蓝底白字外框。
 class AuthFormScaffold extends StatelessWidget {
   const AuthFormScaffold({
     super.key,
@@ -29,7 +28,6 @@ class AuthFormScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 蓝底页面里所有 Icon / IconButton 默认走白色，避免被全局浅灰主题覆盖。
     return Theme(
       data: Theme.of(context).copyWith(
         iconTheme: const IconThemeData(color: Colors.white),
@@ -92,24 +90,23 @@ class AuthFormScaffold extends StatelessWidget {
                   onTap: onBottomLinkTap,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 6),
+                      horizontal: 6,
+                      vertical: 6,
+                    ),
                     child: Text(
                       bottomLink,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 14,
                         decoration: TextDecoration.underline,
-                        decorationColor:
-                            Colors.white.withValues(alpha: 0.7),
+                        decorationColor: Colors.white.withValues(alpha: 0.7),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
                 ),
               ),
-              SizedBox(
-                height: MediaQuery.of(context).padding.bottom + 16,
-              ),
+              SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
             ],
           ),
         ),
@@ -167,7 +164,6 @@ class AuthPrimaryButton extends StatelessWidget {
   }
 }
 
-/// 蓝底页面里的输入框样式。
 class AuthTextField extends StatelessWidget {
   const AuthTextField({
     super.key,
@@ -217,32 +213,29 @@ class AuthTextField extends StatelessWidget {
             ? null
             : Icon(icon, color: Colors.white.withValues(alpha: 0.85), size: 20),
         suffixIcon: suffix,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: borderRadius,
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: borderRadius,
-          borderSide: BorderSide(
-            color: Colors.white.withValues(alpha: 0.18),
-          ),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: borderRadius,
-          borderSide:
-              const BorderSide(color: Colors.white, width: 1.4),
+          borderSide: const BorderSide(color: Colors.white, width: 1.4),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: borderRadius,
-          borderSide:
-              BorderSide(color: Colors.amber.shade200, width: 1.2),
+          borderSide: BorderSide(color: Colors.amber.shade200, width: 1.2),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: borderRadius,
-          borderSide:
-              BorderSide(color: Colors.amber.shade200, width: 1.6),
+          borderSide: BorderSide(color: Colors.amber.shade200, width: 1.6),
         ),
         errorStyle: TextStyle(color: Colors.amber.shade100),
       ),

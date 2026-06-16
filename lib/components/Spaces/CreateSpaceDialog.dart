@@ -72,7 +72,10 @@ class _CreateSpaceDialogState extends State<CreateSpaceDialog> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text('创建空间', style: theme.textTheme.headlineMedium),
+                      child: Text(
+                        '创建空间',
+                        style: theme.textTheme.headlineMedium,
+                      ),
                     ),
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),

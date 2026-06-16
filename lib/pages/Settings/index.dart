@@ -64,10 +64,10 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: palette.textSecondary,
-              letterSpacing: 0.6,
-              fontWeight: FontWeight.w600,
-            ),
+          color: palette.textSecondary,
+          letterSpacing: 0.6,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -171,13 +171,17 @@ class _NavRow extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 6),
                 child: Text(
                   trailing,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(color: palette.textSecondary),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
+                  ),
                 ),
               ),
             if (onTap != null)
-              Icon(Icons.chevron_right_rounded,
-                  color: palette.textSecondary, size: 20),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: palette.textSecondary,
+                size: 20,
+              ),
           ],
         ),
       ),

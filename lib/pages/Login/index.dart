@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ottersync/components/Login/BrandHeader.dart';
-import 'package:ottersync/components/Login/LoginActions.dart';
+import 'package:ottersync/components/Login/LoginBarButton.dart';
 import 'package:ottersync/components/Login/StickyCollage.dart';
 
 const _bgColor = Color(0xFF1F5DBD);
+const _navy = Color(0xFF143C82);
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -42,9 +43,28 @@ class LoginPage extends StatelessWidget {
                 ),
               ),
             ),
-            LoginActions(
-              onLogin: () => context.push('/sign-in'),
-              onRegister: () => context.push('/register'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LoginBarButton(
+                    label: '登录',
+                    background: Colors.white,
+                    foreground: _navy,
+                    border: false,
+                    onTap: () => context.push('/sign-in'),
+                  ),
+                  const SizedBox(height: 12),
+                  LoginBarButton(
+                    label: '注册',
+                    background: Colors.transparent,
+                    foreground: Colors.white,
+                    border: true,
+                    onTap: () => context.push('/register'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

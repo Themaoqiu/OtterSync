@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ottersync/theme/design_tokens.dart';
 
-/// 底部胶囊状输入框 + 发送按钮。
-/// 关键点：用 Container.border 自绘外框，并通过 InputDecoration 把
-/// TextField 自身的所有 border 都置为 none，避免聚焦时跑出第二条 Material 蓝线。
 class Composer extends StatelessWidget {
   const Composer({
     super.key,
@@ -49,17 +46,13 @@ class Composer extends StatelessWidget {
                   minLines: 1,
                   maxLines: 6,
                   cursorColor: palette.primary,
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    height: 1.4,
-                  ),
+                  style: TextStyle(color: palette.textPrimary, height: 1.4),
                   decoration: InputDecoration(
                     hintText: '描述你想做的事…',
                     hintStyle: TextStyle(color: palette.textTertiary),
                     isDense: true,
                     filled: false,
-                    contentPadding:
-                        const EdgeInsets.symmetric(vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
@@ -113,10 +106,7 @@ class _SendButton extends StatelessWidget {
                 ? SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: fg,
-                    ),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: fg),
                   )
                 : Icon(Icons.arrow_upward_rounded, color: fg, size: 20),
           ),
