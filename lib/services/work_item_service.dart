@@ -92,14 +92,14 @@ class WorkItemService {
           return;
         }
 
-        final hasCurrentUser = _currentUid != null;
+        final currentUid = _currentUid;
         final countersRef = _firestore
             .collection(_metaCollection)
             .doc('counters');
         transaction.set(countersRef, {
           'workspaces': 0,
           'workTypes': 3,
-          'users': hasCurrentUser ? 1 : 2,
+          'users': currentUid == null ? 0 : 1,
           'teams': 1,
           'labels': 0,
           'workItems': 0,
@@ -126,32 +126,12 @@ class WorkItemService {
           _workTypesCollection,
           const LookupOption(id: 3, title: '故事', subtitle: 'Story'),
         );
-        final currentUid = _currentUid;
         if (currentUid != null) {
           _seedUserLookup(
             transaction,
             id: 1,
             uid: currentUid,
             email: _currentEmail,
-          );
-        } else {
-          _seedLookup(
-            transaction,
-            _usersCollection,
-            const LookupOption(
-              id: 1,
-              title: 'User 1',
-              subtitle: 'user1@example.com',
-            ),
-          );
-          _seedLookup(
-            transaction,
-            _usersCollection,
-            const LookupOption(
-              id: 2,
-              title: 'User 2',
-              subtitle: 'user2@example.com',
-            ),
           );
         }
         _seedLookup(

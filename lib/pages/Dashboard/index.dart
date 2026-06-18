@@ -40,7 +40,7 @@ class _DashboardViewState extends State<DashboardView> {
     _loadDashboardData();
     _eventSub = AppEventBus.instance.on(
       {AppEventType.workItemCreated, AppEventType.workItemUpdated},
-      (event) {
+      (_) {
         if (mounted) {
           _loadDashboardData();
         }

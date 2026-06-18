@@ -3,15 +3,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ottersync/services/app_event_bus.dart';
 
-///
-///
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('后台收到推送: ${message.messageId} / ${message.notification?.title}');
 }
 
-///
-///
 class MessagingService {
   MessagingService._();
 

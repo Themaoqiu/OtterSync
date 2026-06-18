@@ -1,8 +1,5 @@
 bool canAccessWorkspaceData(
-  Map<String, dynamic> data, {
-  required String? uid,
-  String? email,
-}) {
+  Map<String, dynamic> data, {required String? uid, String? email,}) {
   if (uid == null || uid.isEmpty) {
     return false;
   }

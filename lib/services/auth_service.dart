@@ -123,10 +123,7 @@ class AuthService {
   }
 
   Future<void> _ensureUserRecord(User user) async {
-    final doc = await FirebaseFirestore.instance
-        .collection(_usersCollection)
-        .doc(user.uid)
-        .get();
+    final doc = await FirebaseFirestore.instance.collection(_usersCollection).doc(user.uid).get();
     if (!doc.exists) {
       await FirebaseFirestore.instance
           .collection(_usersCollection)

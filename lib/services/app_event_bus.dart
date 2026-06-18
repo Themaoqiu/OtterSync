@@ -23,8 +23,7 @@ class AppEventBus {
 
   static final AppEventBus instance = AppEventBus._();
 
-  final StreamController<AppEvent> _controller =
-      StreamController<AppEvent>.broadcast();
+  final StreamController<AppEvent> _controller = StreamController<AppEvent>.broadcast();
 
   Stream<AppEvent> get stream => _controller.stream;
 
@@ -39,7 +38,6 @@ class AppEventBus {
     emit(AppEvent(type, payload: payload));
   }
 
-  ///
   StreamSubscription<AppEvent> on(
     Set<AppEventType> types,
     void Function(AppEvent event) onEvent,
